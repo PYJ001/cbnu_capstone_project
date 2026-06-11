@@ -1,0 +1,11 @@
+numpy>=2.0
+opencv-python>=4.10
+ultralytics>=8.4.50
+PyQt5>=5.15
+Pillow>=10.0
+ollama>=0.4
+edge-tts>=7.0
+sounddevice>=0.5
+soundfile>=0.13
+openai-whisper>=20250625
+pyrealsense2
