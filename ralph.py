@@ -21,6 +21,9 @@ from pathlib import Path
 
 DEFAULT_BRANCH = "ralph"
 DEFAULT_MODEL = "gpt-5"
+DEFAULT_CODEX_CANDIDATES = [
+    Path("/home/thor/.vscode/extensions/openai.chatgpt-26.5602.71036-linux-arm64/bin/linux-aarch64/codex"),
+]
 
 
 PROMPT = """
@@ -131,9 +134,30 @@ def ensure_branch(project_dir: Path, branch: str, allow_dirty: bool) -> None:
     run(["git", "checkout", "-b", branch], project_dir)
 
 
-def build_codex_command(project_dir: Path, model: str | None) -> list[str]:
+def find_codex_binary(explicit_path: str | None = None) -> str:
+    if explicit_path:
+        path = Path(explicit_path).expanduser()
+        if path.exists():
+            return str(path)
+        raise SystemExit(f"codex CLI was not found at: {path}")
+
+    from_path = shutil.which("codex")
+    if from_path is not None:
+        return from_path
+
+    for candidate in DEFAULT_CODEX_CANDIDATES:
+        if candidate.exists():
+            return str(candidate)
+
+    raise SystemExit(
+        "codex CLI was not found in PATH. "
+        "Run with --codex-bin /path/to/codex, or add codex to PATH."
+    )
+
+
+def build_codex_command(project_dir: Path, model: str | None, codex_bin: str) -> list[str]:
     cmd = [
-        "codex",
+        codex_bin,
         "exec",
         "-C",
         str(project_dir),
@@ -150,17 +174,14 @@ def build_codex_command(project_dir: Path, model: str | None) -> list[str]:
     return cmd
 
 
-def run_codex(project_dir: Path, model: str | None) -> int:
-    if shutil.which("codex") is None:
-        raise SystemExit("codex CLI was not found in PATH.")
-
+def run_codex(project_dir: Path, model: str | None, codex_bin: str) -> int:
     logs_dir = project_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
 
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     log_path = logs_dir / f"ralph_{stamp}.log"
 
-    cmd = build_codex_command(project_dir, model)
+    cmd = build_codex_command(project_dir, model, codex_bin)
     print("+", " ".join(cmd[:-1]), "< prompt", flush=True)
     print(f"[ralph] log: {log_path}", flush=True)
 
@@ -211,17 +232,23 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Allow starting even if the working tree already has changes.",
     )
+    parser.add_argument(
+        "--codex-bin",
+        default=None,
+        help="Path to the codex executable if it is not in PATH.",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     project_dir = args.project_dir.resolve()
+    codex_bin = find_codex_binary(args.codex_bin)
 
     ensure_git_repo(project_dir)
     ensure_branch(project_dir, args.branch, args.allow_dirty)
 
-    code = run_codex(project_dir, args.model)
+    code = run_codex(project_dir, args.model, codex_bin)
 
     print("\n[ralph] finished")
     run(["git", "status", "--short", "--branch"], project_dir, check=False)
