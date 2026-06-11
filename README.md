@@ -209,3 +209,4 @@ rsync -av robot_motion_records /home/thor/Projects/capstone_project/
 # cbnu_capstone_project
 # cbnu_capstone_project
 # cbnu_capstone_project
+# cbnu_capstone_project
