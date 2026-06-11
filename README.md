@@ -207,3 +207,4 @@ rsync -av robot_camera_calibration_samples /home/thor/Projects/capstone_project/
 rsync -av robot_motion_records /home/thor/Projects/capstone_project/
 ```
 # cbnu_capstone_project
+# cbnu_capstone_project
