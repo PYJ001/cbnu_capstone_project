@@ -1,0 +1,60 @@
+{
+  "accepted_count": 71,
+  "rejected_count": 51,
+  "total_attempts": 122,
+  "acceptance_rate": 0.5819672131147541,
+  "valid_csv_rows": 71,
+  "u": {
+    "count": 71,
+    "min": 156.0,
+    "mean": 343.7887268066406,
+    "max": 596.0,
+    "std": 105.94709777832031
+  },
+  "v": {
+    "count": 71,
+    "min": 37.0,
+    "mean": 232.45069885253906,
+    "max": 414.0,
+    "std": 86.62674713134766
+  },
+  "d": {
+    "count": 71,
+    "min": 0.4960000216960907,
+    "mean": 0.6170071363449097,
+    "max": 0.7400000691413879,
+    "std": 0.07143837213516235
+  },
+  "conf": {
+    "count": 71,
+    "min": 0.45079049468040466,
+    "mean": 0.8898922801017761,
+    "max": 0.9505516886711121,
+    "std": 0.09065594524145126
+  },
+  "pose_counts": {
+    "calib_01_center_high": 3,
+    "calib_02_center_mid": 4,
+    "calib_03_center_low": 4,
+    "calib_04_left_front": 4,
+    "calib_05_left_mid": 4,
+    "calib_06_right_mid": 4,
+    "calib_07_right_front": 4,
+    "calib_08_right_low": 3,
+    "calib_09_left_low": 2,
+    "calib_10_far_left": 4,
+    "calib_11_far_right": 4,
+    "calib_12_left_high": 4,
+    "calib_13_right_high": 3,
+    "calib_14_left_center": 3,
+    "calib_15_right_center": 3,
+    "calib_16_left_low_mid": 3,
+    "calib_17_right_low_mid": 3,
+    "calib_18_left_near": 4,
+    "calib_19_center_near": 4,
+    "calib_20_right_near": 4
+  },
+  "pose_count_min": 2,
+  "pose_count_max": 4,
+  "pose_count_mean": 3.55
+}
