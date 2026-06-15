@@ -101,3 +101,21 @@ class YoloRobotDetector:
             return None
 
         return float(np.median(valid))
+
+
+class YoloRobot:
+    def __init__(self, *args, **kwargs):
+        self.enabled = True
+        self.detector = YoloRobotDetector(*args, **kwargs)
+
+    def inference(self, frame, depth):
+        if not self.enabled:
+            return None
+
+        return self.detector.inference(frame, depth)
+
+    def set_enabled(self, enabled):
+        self.enabled = bool(enabled)
+
+    def is_enabled(self):
+        return self.enabled

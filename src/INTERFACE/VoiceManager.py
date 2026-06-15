@@ -1,4 +1,5 @@
 import asyncio
+import os
 import shutil
 import subprocess
 import tempfile
@@ -20,17 +21,24 @@ class VoiceManager:
         stt_sample_rate=16000,
         stt_record_seconds=5.0,
         stt_language="ko",
+        stt_device=None,
+        stt_gain=1.0,
     ):
         self.tts_voice = tts_voice
         self.tts_output_path = Path(tts_output_path)
         self.tts_wav_path = Path(tts_wav_path)
         self.tts_player_cmd = tts_player_cmd
 
-        self.stt_model_name = stt_model_name
-        self.stt_sample_rate = stt_sample_rate
-        self.stt_record_seconds = stt_record_seconds
-        self.stt_language = stt_language
+        self.stt_model_name = os.getenv("ROBOT_STT_MODEL", stt_model_name)
+        self.stt_sample_rate = int(os.getenv("ROBOT_STT_SAMPLE_RATE", stt_sample_rate))
+        self.stt_record_seconds = float(
+            os.getenv("ROBOT_STT_RECORD_SECONDS", stt_record_seconds)
+        )
+        self.stt_language = os.getenv("ROBOT_STT_LANGUAGE", stt_language)
+        self.stt_device = os.getenv("ROBOT_STT_DEVICE", stt_device or "auto")
+        self.stt_gain = float(os.getenv("ROBOT_STT_GAIN", stt_gain))
         self.stt_model = None
+        self._reported_audio_devices = False
 
     def speak(self, text):
         """Text-to-speech: synthesize and play audio."""
@@ -66,6 +74,7 @@ class VoiceManager:
         return self._listen()
 
     def _listen(self):
+        import numpy as np
         import sounddevice as sd
         import soundfile as sf
         import whisper
@@ -74,20 +83,49 @@ class VoiceManager:
             print(f"[VoiceManager] loading STT model: {self.stt_model_name}")
             self.stt_model = whisper.load_model(self.stt_model_name)
 
-        print("[VoiceManager] listening...")
+        self._report_audio_devices_once(sd)
+        device = self._select_input_device(sd)
+        record_sample_rate = self._get_device_sample_rate(sd, device)
+        print(
+            "[VoiceManager] listening... "
+            f"seconds={self.stt_record_seconds} "
+            f"device={device} "
+            f"sample_rate={record_sample_rate}",
+            flush=True,
+        )
 
         audio = sd.rec(
-            int(self.stt_record_seconds * self.stt_sample_rate),
-            samplerate=self.stt_sample_rate,
+            int(self.stt_record_seconds * record_sample_rate),
+            samplerate=record_sample_rate,
             channels=1,
             dtype="float32",
+            device=device,
         )
         sd.wait()
+
+        audio = np.asarray(audio, dtype=np.float32)
+
+        if self.stt_gain != 1.0:
+            audio = np.clip(audio * self.stt_gain, -1.0, 1.0)
+
+        rms = float(np.sqrt(np.mean(np.square(audio)))) if audio.size else 0.0
+        peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+        print(
+            f"[VoiceManager] audio level rms={rms:.6f} peak={peak:.6f}",
+            flush=True,
+        )
+
+        if peak < 0.003:
+            print(
+                "[VoiceManager] audio is too quiet. Check microphone input device.",
+                flush=True,
+            )
+            return ""
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             wav_path = Path(tmp.name)
 
-        sf.write(str(wav_path), audio, self.stt_sample_rate)
+        sf.write(str(wav_path), audio, record_sample_rate)
 
         try:
             result = self.stt_model.transcribe(
@@ -152,6 +190,104 @@ class VoiceManager:
 
     def _has_command(self, command):
         return shutil.which(command) is not None
+
+    def _report_audio_devices_once(self, sd):
+        if self._reported_audio_devices:
+            return
+
+        self._reported_audio_devices = True
+
+        try:
+            default_input = sd.default.device[0]
+            print(f"[VoiceManager] default input device: {default_input}", flush=True)
+
+            devices = sd.query_devices()
+            print("[VoiceManager] input devices:", flush=True)
+
+            for index, device in enumerate(devices):
+                if int(device.get("max_input_channels", 0)) <= 0:
+                    continue
+
+                print(
+                    "  "
+                    f"{index}: {device.get('name')} "
+                    f"inputs={device.get('max_input_channels')} "
+                    f"rate={device.get('default_samplerate')}",
+                    flush=True,
+                )
+
+            if self.stt_device:
+                print(
+                    f"[VoiceManager] ROBOT_STT_DEVICE={self.stt_device}",
+                    flush=True,
+                )
+
+        except Exception as exc:
+            print(f"[VoiceManager] failed to query audio devices: {exc}", flush=True)
+
+    def _select_input_device(self, sd):
+        if self.stt_device == "":
+            return None
+
+        if self.stt_device.lower() == "auto":
+            return self._select_auto_input_device(sd)
+
+        try:
+            return int(self.stt_device)
+        except ValueError:
+            pass
+
+        devices = sd.query_devices()
+        target = self.stt_device.lower()
+
+        for index, device in enumerate(devices):
+            if int(device.get("max_input_channels", 0)) <= 0:
+                continue
+
+            name = str(device.get("name", "")).lower()
+
+            if target in name:
+                return index
+
+        raise RuntimeError(
+            "ROBOT_STT_DEVICE did not match an input device: "
+            f"{self.stt_device}"
+        )
+
+    def _select_auto_input_device(self, sd):
+        devices = sd.query_devices()
+        preferred_keywords = [
+            "usb",
+            "microphone",
+            "mic",
+        ]
+
+        for keyword in preferred_keywords:
+            for index, device in enumerate(devices):
+                if int(device.get("max_input_channels", 0)) <= 0:
+                    continue
+
+                name = str(device.get("name", "")).lower()
+
+                if keyword in name and "default" not in name:
+                    return index
+
+        default_input = sd.default.device[0]
+
+        if default_input is None or int(default_input) < 0:
+            return None
+
+        return int(default_input)
+
+    def _get_device_sample_rate(self, sd, device):
+        if device is None:
+            device = sd.default.device[0]
+
+        try:
+            info = sd.query_devices(device, "input")
+            return int(float(info.get("default_samplerate", self.stt_sample_rate)))
+        except Exception:
+            return int(self.stt_sample_rate)
 
 
 # Backward compatibility: expose individual classes

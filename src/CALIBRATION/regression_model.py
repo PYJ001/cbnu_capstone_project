@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 
-class CalibrationModel:
+class RegressionModel:
     def __init__(self, samples, k=4, power=2.0):
         if len(samples) == 0:
             raise ValueError("calibration samples are empty")
@@ -82,8 +82,8 @@ class CalibrationModel:
 
         return parsed
 
-    @staticmethod
-    def _resolve_csv_path(csv_path, search_dir):
+    @classmethod
+    def _resolve_csv_path(cls, csv_path, search_dir):
         if csv_path is not None:
             path = Path(csv_path)
 
@@ -99,10 +99,25 @@ class CalibrationModel:
 
         paths = sorted(root.glob("*/robot_camera_calibration_samples.csv"))
 
-        if len(paths) == 0:
-            return None
+        for path in reversed(paths):
+            if cls._csv_has_samples(path):
+                return path
 
-        return paths[-1]
+        return None
+
+    @classmethod
+    def _csv_has_samples(cls, path):
+        try:
+            with Path(path).open("r", newline="", encoding="utf-8") as csv_file:
+                reader = csv.DictReader(csv_file)
+
+                for row in reader:
+                    if cls._parse_row(row) is not None:
+                        return True
+        except Exception:
+            return False
+
+        return False
 
     @classmethod
     def _parse_row(cls, row):

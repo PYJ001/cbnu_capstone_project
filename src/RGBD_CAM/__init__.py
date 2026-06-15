@@ -1,13 +1,13 @@
-from .RGBD import RGBD
-from .RGB import RGB
-from .YoloRobot import YoloRobotDetector
-from .YoloWorld import YoloWorldDetector
-from .RGBDService import RGBDService
+from .rgbd_cam_main import RGBD
+from .VLM import VLM
+from .YoloRobot import YoloRobot, YoloRobotDetector
+from .YoloWorld import YoloWorld, YoloWorldDetector
 
 __all__ = [
     "RGBD",
-    "RGB",
+    "VLM",
+    "YoloRobot",
     "YoloRobotDetector",
+    "YoloWorld",
     "YoloWorldDetector",
-    "RGBDService",
 ]

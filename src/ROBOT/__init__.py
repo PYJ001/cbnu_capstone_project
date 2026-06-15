@@ -1,5 +1,4 @@
-from .RobotManager import ROBOT
-from .RobotActionHandler import RobotActionHandler
-from .RobotService import RobotService
+from .robot_actions import RobotActions
+from .robot_main import ROBOT
 
-__all__ = ["ROBOT", "RobotActionHandler", "RobotService"]
+__all__ = ["ROBOT", "RobotActions"]

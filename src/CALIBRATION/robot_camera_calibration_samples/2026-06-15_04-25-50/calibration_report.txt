@@ -1,0 +1,38 @@
+Calibration Report
+==================
+
+accepted_count: 67
+rejected_count: 58
+total_attempts: 125
+acceptance_rate: 0.536
+valid_csv_rows: 67
+
+u: count=67 min=192.000 mean=390.313 max=621.000 std=92.393
+v: count=67 min=43.000 mean=219.746 max=411.000 std=74.325
+d: count=67 min=0.414 mean=0.572 max=0.951 std=0.100
+conf: count=67 min=0.528 mean=0.882 max=0.948 std=0.086
+
+Pose Counts
+-----------
+calib_01_center_high: 3
+calib_02_center_mid: 4
+calib_03_center_low: 4
+calib_04_left_front: 4
+calib_05_left_mid: 3
+calib_06_right_mid: 4
+calib_07_right_front: 2
+calib_08_right_low: 1
+calib_09_left_low: 2
+calib_10_far_left: 3
+calib_11_far_right: 4
+calib_12_left_high: 3
+calib_13_right_high: 4
+calib_14_left_center: 3
+calib_15_right_center: 4
+calib_16_left_low_mid: 3
+calib_17_right_low_mid: 4
+calib_18_left_near: 4
+calib_19_center_near: 4
+calib_20_right_near: 4
+
+pose_count min=1 mean=3.35 max=4
