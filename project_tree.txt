@@ -1,0 +1,79 @@
+.
+├── code_analysis.py
+├── main.py
+├── project_analysis.md
+├── project_report.md
+├── project_tree.txt
+├── README.md
+├── requirements.txt
+├── src
+│   ├── CALIBRATION
+│   │   ├── calibration_main.py
+│   │   ├── calibration_poses.py
+│   │   ├── collect_calibration_samples.py
+│   │   ├── __init__.py
+│   │   ├── regression_model.py
+│   │   └── robot_camera_calibration_samples
+│   ├── __init__.py
+│   ├── INTERFACE
+│   │   ├── __init__.py
+│   │   ├── interface_main.py
+│   │   ├── interface_pyqt5.py
+│   │   ├── interface_utils.py
+│   │   └── VoiceManager.py
+│   ├── LLM_PLANNER
+│   │   ├── __init__.py
+│   │   ├── llm_planner_main.py
+│   │   └── llm.py
+│   ├── ProjectController.py
+│   ├── RGBD_CAM
+│   │   ├── __init__.py
+│   │   ├── rgbd_cam_main.py
+│   │   ├── VLM.py
+│   │   ├── YoloRobot.py
+│   │   └── YoloWorld.py
+│   ├── ROBOT
+│   │   ├── __init__.py
+│   │   ├── MotionTrajectory.py
+│   │   ├── robot_actions.py
+│   │   └── robot_main.py
+│   ├── RobotApp.py
+│   ├── srv
+│   │   ├── __init__.py
+│   │   └── process_service.py
+│   └── utils.py
+└── trash
+    ├── ARUCO.py
+    ├── camera_test.py
+    ├── collect_calibration_samples.py
+    ├── docs
+    │   └── ralph_report.md
+    ├── Interface.py
+    ├── LLM_PLANNER
+    │   ├── LLM_planner.py
+    │   ├── LLM.py
+    │   └── LLMService.py
+    ├── logs
+    │   ├── ralph_20260612_004833.log
+    │   ├── ralph_20260612_005302.log
+    │   ├── ralph_20260612_005814.log
+    │   └── ralph_20260612_010103.log
+    ├── ralph.py
+    ├── RGBD_CAM
+    │   ├── RGBD.py
+    │   ├── RGBDService.py
+    │   └── RGB.py
+    ├── ROBOT
+    │   ├── RobotActionHandler.py
+    │   ├── RobotManager.py
+    │   └── RobotService.py
+    ├── RobotCommandController.py
+    ├── test_record_motion.py
+    ├── TTS.py
+    ├── vlm_updator
+    │   ├── __init__.py
+    │   ├── VLM.py
+    │   └── VLMWorldClassUpdater.py
+    └── WhisperSTT.py
+
+16 directories, 61 files

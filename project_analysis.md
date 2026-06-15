@@ -1,0 +1,1451 @@
+## code_analysis.py
+### imports
+- ast
+- pathlib.Path
+- requests
+- subprocess
+### classes
+- 없음
+### functions
+- analyze_project()
+- analyze_python_file()
+- ask_ollama()
+- get_tree()
+- main()
+- should_skip()
+
+## main.py
+### imports
+- src.RobotApp.RobotApp
+### classes
+- 없음
+### functions
+- main()
+
+## src/RobotApp.py
+### imports
+- src.CALIBRATION.calibration_main.CalibrationModel
+- src.INTERFACE.interface_main.Interface
+- src.LLM_PLANNER.llm_planner_main.LLMPlanner
+- src.ProjectController.ProjectController
+- src.RGBD_CAM.rgbd_cam_main.RGBD
+- src.ROBOT.robot_main.ROBOT
+- threading
+### classes
+- RobotApp
+  - __init__()
+  - test()
+  - run()
+  - close()
+### functions
+- __init__()
+- close()
+- run()
+- test()
+
+## src/ProjectController.py
+### imports
+- argparse
+- pathlib.Path
+- src.CALIBRATION.CalibrationModelService
+- src.INTERFACE.interface_main.Interface
+- src.RGBD_CAM.VLM.VLM
+- src.RGBD_CAM.YoloRobot.YoloRobot
+- src.RGBD_CAM.YoloWorld.YoloWorld
+- src.RGBD_CAM.rgbd_cam_main.RGBD
+- sys
+- threading
+- time
+### classes
+- ProjectController
+  - __init__()
+  - launch()
+  - join()
+  - stop()
+  - main_loop()
+  - _receive_interface_command()
+  - _route_interface_command()
+  - _handle_quit_command()
+  - _handle_user_task_command()
+  - _handle_recalibration_command()
+  - _handle_perception_command()
+  - _request_latest_rgbd_frame()
+  - _request_perception_data()
+  - _request_fresh_perception_data()
+  - _run_vlm()
+  - _run_yolo_robot()
+  - _run_yolo_world()
+  - _apply_calibration()
+  - _request_llm_plan()
+  - _command_robot()
+  - _request_latest_robot_detection()
+  - _publish_rgbd_frame()
+  - _publish_interface_state()
+  - test()
+  - test_rgbd_interface()
+  - _handle_test_interface_command()
+  - _capture_rgbd_frame()
+  - _launch_test_modules()
+  - _close_test_modules()
+  - _make_final_result()
+  - _is_quit_command()
+  - _is_recalibration_command()
+  - _is_perception_command()
+  - _format_perception_result()
+  - _format_task_result()
+  - _get_current_user_command()
+- _NoopRobot
+  - run_sequence()
+- _NoopLLMPlanner
+  - inference()
+### functions
+- __init__()
+- _apply_calibration()
+- _capture_rgbd_frame()
+- _close_test_modules()
+- _command_robot()
+- _format_perception_result()
+- _format_task_result()
+- _get_current_user_command()
+- _handle_perception_command()
+- _handle_quit_command()
+- _handle_recalibration_command()
+- _handle_test_interface_command()
+- _handle_user_task_command()
+- _is_perception_command()
+- _is_quit_command()
+- _is_recalibration_command()
+- _launch_test_modules()
+- _make_final_result()
+- _publish_interface_state()
+- _publish_rgbd_frame()
+- _receive_interface_command()
+- _request_fresh_perception_data()
+- _request_latest_rgbd_frame()
+- _request_latest_robot_detection()
+- _request_llm_plan()
+- _request_perception_data()
+- _route_interface_command()
+- _run_vlm()
+- _run_yolo_robot()
+- _run_yolo_world()
+- inference()
+- join()
+- launch()
+- main()
+- main_loop()
+- run_sequence()
+- stop()
+- test()
+- test_rgbd_interface()
+
+## src/__init__.py
+### imports
+- 없음
+### classes
+- 없음
+### functions
+- 없음
+
+## src/utils.py
+### imports
+- 없음
+### classes
+- 없음
+### functions
+- pivot()
+
+## trash/Interface.py
+### imports
+- VoiceManager.WhisperSTT
+- cv2
+- interface_utils.draw_detections
+- interface_utils.draw_text_panel
+- interface_utils.make_depth_view
+- multiprocessing
+- numpy
+- queue.Empty
+- threading
+- time
+### classes
+- Interface
+  - __init__()
+  - start_camera_stream()
+  - _camera_loop()
+  - get_latest_camera_data()
+  - get_user_command()
+  - update()
+  - _send_to_visualizer()
+  - run()
+  - close()
+### functions
+- __init__()
+- _camera_loop()
+- _send_to_visualizer()
+- _visualizer_loop()
+- close()
+- get_latest_camera_data()
+- get_user_command()
+- run()
+- start_camera_stream()
+- update()
+
+## trash/RobotCommandController.py
+### imports
+- collect_calibration_samples.collect_calibration_samples
+- contextlib.contextmanager
+- time
+### classes
+- RobotCommandController
+  - __init__()
+  - run()
+  - _run_user_command()
+  - _run_recalibration()
+  - _recalibration_context()
+  - _get_latest_robot_detection()
+  - _is_recalibration_command()
+### functions
+- __init__()
+- _get_latest_robot_detection()
+- _is_recalibration_command()
+- _recalibration_context()
+- _run_recalibration()
+- _run_user_command()
+- run()
+
+## trash/WhisperSTT.py
+### imports
+- VoiceManager.WhisperSTT
+### classes
+- 없음
+### functions
+- 없음
+
+## trash/ralph.py
+### imports
+- __future__.annotations
+- argparse
+- datetime
+- pathlib.Path
+- shutil
+- subprocess
+- sys
+- time
+### classes
+- 없음
+### functions
+- build_codex_command()
+- ensure_branch()
+- ensure_git_repo()
+- find_codex_binary()
+- main()
+- output()
+- output_lines()
+- parse_args()
+- run()
+- run_codex()
+
+## trash/TTS.py
+### imports
+- VoiceManager.TTS
+### classes
+- 없음
+### functions
+- 없음
+
+## trash/collect_calibration_samples.py
+### imports
+- calibration.collect_calibration_samples.main
+### classes
+- 없음
+### functions
+- 없음
+
+## trash/camera_test.py
+### imports
+- argparse
+- cv2
+- glob
+- os
+### classes
+- 없음
+### functions
+- main()
+- probe_device()
+- scan_devices()
+
+## trash/test_record_motion.py
+### imports
+- argparse
+- csv
+- datetime.datetime
+- json
+- pathlib.Path
+- src.MotionTrajectory.MOTION_FIELDNAMES
+- src.MotionTrajectory.load_motion_csv
+- src.MotionTrajectory.replay_motion_csv
+- src.MotionTrajectory.sanitize_motion_name
+- src.RobotManager.ROBOT
+- time
+### classes
+- 없음
+### functions
+- main()
+- make_motion_row()
+- make_output_dir()
+- parse_args()
+- record_motion()
+- replay_recorded_motion()
+- save_motion()
+
+## trash/ARUCO.py
+### imports
+- cv2
+- numpy
+- pyrealsense2
+### classes
+- 없음
+### functions
+- camera_point_to_marker()
+- deproject_pixel_to_camera()
+- draw_text()
+- estimate_marker_pose()
+- main()
+- make_camera_matrix()
+- make_detector_params()
+- make_detectors()
+- marker_point_to_robot()
+
+## src/RGBD_CAM/YoloRobot.py
+### imports
+- numpy
+- pathlib.Path
+- ultralytics.YOLO
+### classes
+- YoloRobotDetector
+  - __init__()
+  - inference()
+  - _make_object_dict()
+  - _apply_robot_depth_offset()
+  - _get_depth_at()
+- YoloRobot
+  - __init__()
+  - inference()
+  - set_enabled()
+  - is_enabled()
+### functions
+- __init__()
+- _apply_robot_depth_offset()
+- _get_depth_at()
+- _make_object_dict()
+- inference()
+- is_enabled()
+- set_enabled()
+
+## src/RGBD_CAM/rgbd_cam_main.py
+### imports
+- cv2
+- glob
+- numpy
+- pyrealsense2
+- threading
+- time
+### classes
+- RGBD
+  - __init__()
+  - launch()
+  - run()
+  - close()
+  - _start_camera_stream()
+  - _open_camera()
+  - _close_camera()
+  - get_rgb()
+  - get_depth()
+  - get_rgbd()
+  - get_frame()
+  - get_latest_rgbd_frame()
+  - get_latest_camera_data()
+  - capture_rgbd_frame()
+  - get_camera_data()
+  - camera_loop()
+  - _read_camera_once()
+  - _make_rgbd_frame()
+  - _find_camera()
+  - _make_camera_candidates()
+  - _try_open_camera()
+  - _setup_opencv_capture()
+  - _read_realsense()
+  - _read_opencv()
+  - test()
+### functions
+- __init__()
+- _close_camera()
+- _find_camera()
+- _make_camera_candidates()
+- _make_rgbd_frame()
+- _open_camera()
+- _read_camera_once()
+- _read_opencv()
+- _read_realsense()
+- _setup_opencv_capture()
+- _start_camera_stream()
+- _try_open_camera()
+- camera_loop()
+- capture_rgbd_frame()
+- close()
+- get_camera_data()
+- get_depth()
+- get_frame()
+- get_latest_camera_data()
+- get_latest_rgbd_frame()
+- get_rgb()
+- get_rgbd()
+- launch()
+- main()
+- run()
+- test()
+
+## src/RGBD_CAM/VLM.py
+### imports
+- PIL.Image
+- cv2
+- io
+- ollama
+### classes
+- VLM
+  - __init__()
+  - inference()
+  - infer_scene_and_objects()
+  - _describe_frame()
+  - _frame_to_jpeg_bytes()
+  - _latest_result()
+  - extract_object_classes()
+  - normalize_object_class()
+  - is_ignored_world_class()
+### functions
+- __init__()
+- _describe_frame()
+- _frame_to_jpeg_bytes()
+- _latest_result()
+- extract_object_classes()
+- infer_scene_and_objects()
+- inference()
+- is_ignored_world_class()
+- normalize_object_class()
+
+## src/RGBD_CAM/__init__.py
+### imports
+- VLM.VLM
+- YoloRobot.YoloRobot
+- YoloRobot.YoloRobotDetector
+- YoloWorld.YoloWorld
+- YoloWorld.YoloWorldDetector
+- rgbd_cam_main.RGBD
+### classes
+- 없음
+### functions
+- 없음
+
+## src/RGBD_CAM/YoloWorld.py
+### imports
+- collections.deque
+- numpy
+- threading
+- ultralytics.YOLO
+### classes
+- YoloWorldDetector
+  - __init__()
+  - inference()
+  - set_classes()
+  - set_enabled()
+  - is_enabled()
+  - get_classes()
+  - _set_model_classes()
+  - _clean_classes()
+  - _canonical_name()
+  - _expand_class_prompt()
+  - _make_object_dict()
+  - _get_depth_at()
+- YoloWorld
+  - __init__()
+  - inference()
+  - set_classes()
+  - get_classes()
+  - add_classes_from_vlm()
+  - set_enabled()
+  - is_enabled()
+  - _clean_vlm_class()
+  - _is_human_class()
+### functions
+- __init__()
+- _canonical_name()
+- _clean_classes()
+- _clean_vlm_class()
+- _expand_class_prompt()
+- _get_depth_at()
+- _is_human_class()
+- _make_object_dict()
+- _set_model_classes()
+- add_classes_from_vlm()
+- get_classes()
+- inference()
+- is_enabled()
+- set_classes()
+- set_enabled()
+
+## src/ROBOT/MotionTrajectory.py
+### imports
+- csv
+- pathlib.Path
+### classes
+- 없음
+### functions
+- find_latest_motion_csv()
+- load_motion_csv()
+- replay_motion_csv()
+- sanitize_motion_name()
+
+## src/ROBOT/__init__.py
+### imports
+- robot_actions.RobotActions
+- robot_main.ROBOT
+### classes
+- 없음
+### functions
+- 없음
+
+## src/ROBOT/robot_main.py
+### imports
+- argparse
+- json
+- pathlib.Path
+- re
+- src.CALIBRATION.calibration_poses.DEFAULT_CALIBRATION_POSES
+- src.ROBOT.robot_actions.RobotActions
+- subprocess
+- sys
+### classes
+- ROBOT
+  - __init__()
+  - launch()
+  - run()
+  - close()
+  - get_pose()
+  - get_current_pose()
+  - set_current_pose()
+  - move_angle()
+  - move_to_base_pose()
+  - get_calibration_poses()
+  - move_to_calibration_pose()
+  - action()
+  - run_sequence()
+  - get_available_actions()
+  - _normalize_action()
+  - _get_move_target()
+  - _get_world_objects()
+  - move_to_uvd_offset()
+  - lift_current_pose()
+  - _open_gripper()
+  - _close_gripper()
+  - _move_joint()
+  - _make_offset_pose()
+  - _estimate_angle_offset()
+  - _extract_target_pose()
+  - _parse_get_pose_output()
+  - _find_object()
+  - _as_object_list()
+  - _visual_servo_step()
+  - test()
+### functions
+- __init__()
+- _as_object_list()
+- _close_gripper()
+- _estimate_angle_offset()
+- _extract_target_pose()
+- _find_object()
+- _get_move_target()
+- _get_world_objects()
+- _make_offset_pose()
+- _move_joint()
+- _normalize_action()
+- _open_gripper()
+- _parse_get_pose_output()
+- _visual_servo_step()
+- action()
+- close()
+- get_available_actions()
+- get_calibration_poses()
+- get_current_pose()
+- get_pose()
+- launch()
+- lift_current_pose()
+- main()
+- move_angle()
+- move_to_base_pose()
+- move_to_calibration_pose()
+- move_to_uvd_offset()
+- run()
+- run_sequence()
+- set_current_pose()
+- test()
+
+## src/ROBOT/robot_actions.py
+### imports
+- MotionTrajectory.find_latest_motion_csv
+- MotionTrajectory.replay_motion_csv
+- time
+### classes
+- RobotActions
+  - __init__()
+  - run()
+  - get_available_actions()
+  - get_action()
+  - dance()
+  - wave_hand()
+  - shake_hand()
+  - move_to_object()
+  - move_above_object()
+  - grab()
+  - release()
+  - lift()
+  - throw()
+  - draw_heart()
+  - hand_over()
+  - _run_pose_sequence()
+  - _run_recorded_motion()
+  - _extract_target_pose()
+### functions
+- DNC()
+- GRB()
+- HND()
+- HRT()
+- LFT()
+- MOV()
+- MVA()
+- REL()
+- SKH()
+- THR()
+- TRW()
+- WAV()
+- __init__()
+- _extract_target_pose()
+- _run_pose_sequence()
+- _run_recorded_motion()
+- dance()
+- draw_heart()
+- get_action()
+- get_action_function()
+- get_available_actions()
+- grab()
+- hand_over()
+- lift()
+- move_above_object()
+- move_to_object()
+- release()
+- run()
+- shake_hand()
+- throw()
+- wave_hand()
+
+## src/srv/__init__.py
+### imports
+- process_service.ProcessService
+### classes
+- 없음
+### functions
+- 없음
+
+## src/srv/process_service.py
+### imports
+- multiprocessing
+- traceback
+### classes
+- ProcessService
+  - __init__()
+  - launch()
+  - close()
+  - call()
+  - _process_main_wrapper()
+  - _process_main()
+### functions
+- __init__()
+- _process_main()
+- _process_main_wrapper()
+- call()
+- close()
+- launch()
+
+## src/CALIBRATION/calibration_main.py
+### imports
+- collect_calibration_samples.collect_calibration_samples
+- copy
+- importlib.util
+- pathlib.Path
+- regression_model.RegressionModel
+- src.CALIBRATION.collect_calibration_samples.collect_calibration_samples
+- sys
+### classes
+- CalibrationModel
+  - __init__()
+  - launch()
+  - close()
+  - run()
+  - run_recalibration()
+  - calibrate()
+  - reload()
+  - uvd2qrst()
+  - uvd2xyz()
+  - uvd2qrst_objs()
+  - test()
+  - _format_qrst()
+  - _qrst_to_joint_tuple()
+  - _collect_calibration_samples()
+  - _safe_call()
+### functions
+- __init__()
+- _collect_calibration_samples()
+- _format_qrst()
+- _qrst_to_joint_tuple()
+- _safe_call()
+- calibrate()
+- close()
+- create_calibration_model()
+- launch()
+- main()
+- reload()
+- run()
+- run_recalibration()
+- test()
+- uvd2qrst()
+- uvd2qrst_objs()
+- uvd2xyz()
+
+## src/CALIBRATION/regression_model.py
+### imports
+- csv
+- numpy
+- pathlib.Path
+### classes
+- RegressionModel
+  - __init__()
+  - from_latest_or_path()
+  - from_csv()
+  - predict()
+  - _float_or_mean()
+  - _resolve_csv_path()
+  - _parse_row()
+  - _parse_float()
+### functions
+- __init__()
+- _float_or_mean()
+- _parse_float()
+- _parse_row()
+- _resolve_csv_path()
+- from_csv()
+- from_latest_or_path()
+- predict()
+
+## src/CALIBRATION/calibration_poses.py
+### imports
+- 없음
+### classes
+- 없음
+### functions
+- 없음
+
+## src/CALIBRATION/collect_calibration_samples.py
+### imports
+- argparse
+- csv
+- cv2
+- datetime.datetime
+- json
+- numpy
+- pathlib.Path
+- src.RGBD_CAM.RGBD
+- src.ROBOT.ROBOT
+- threading
+- time
+### classes
+- 없음
+### functions
+- _move_to_calibration_pose_worker()
+- capture_robot_detection()
+- collect_calibration_samples()
+- depth_to_color()
+- draw_robot_detection()
+- format_calibration_report()
+- format_summary()
+- load_calibration_rows()
+- main()
+- make_calibration_report()
+- make_csv_row()
+- parse_args()
+- parse_float()
+- safe_ratio()
+- save_rejected_image()
+- save_sample_image()
+- save_uv_coverage_image()
+- summarize_values()
+- validate_robot_detection()
+- write_calibration_report()
+
+## src/CALIBRATION/__init__.py
+### imports
+- calibration_main.CalibrationModel
+- calibration_main.CalibrationModelService
+- calibration_main.create_calibration_model
+- calibration_poses.DEFAULT_CALIBRATION_POSES
+- collect_calibration_samples.collect_calibration_samples
+- regression_model.RegressionModel
+### classes
+- 없음
+### functions
+- collect_calibration_samples()
+
+## src/INTERFACE/interface_pyqt5.py
+### imports
+- PyQt5.QtCore.QLibraryInfo
+- PyQt5.QtCore.QTimer
+- PyQt5.QtCore.Qt
+- PyQt5.QtGui.QImage
+- PyQt5.QtGui.QPixmap
+- PyQt5.QtWidgets.QApplication
+- PyQt5.QtWidgets.QGridLayout
+- PyQt5.QtWidgets.QGroupBox
+- PyQt5.QtWidgets.QHBoxLayout
+- PyQt5.QtWidgets.QLabel
+- PyQt5.QtWidgets.QLineEdit
+- PyQt5.QtWidgets.QMainWindow
+- PyQt5.QtWidgets.QPushButton
+- PyQt5.QtWidgets.QTextEdit
+- PyQt5.QtWidgets.QVBoxLayout
+- PyQt5.QtWidgets.QWidget
+- cv2
+- importlib.util.find_spec
+- interface_utils.Canvas
+- interface_utils.draw_detections
+- interface_utils.make_depth_view
+- multiprocessing
+- os
+- queue
+### classes
+- InterfacePyQt5Process
+  - __init__()
+  - launch()
+  - close()
+  - call()
+  - _close_queue()
+  - get_user_command()
+  - _report_process_exit_once()
+- RobotInterfaceWindow
+  - __init__()
+  - set_title()
+  - set_state()
+  - set_rgbd()
+  - show_status()
+  - closeEvent()
+  - _send_text_command()
+  - _load_text_command()
+- ImageLabel
+  - __init__()
+  - set_cv_image()
+  - resizeEvent()
+  - _set_scaled_pixmap()
+### functions
+- __init__()
+- _close_queue()
+- _load_pyqt5()
+- _load_text_command()
+- _pyqt5_process_main()
+- _report_process_exit_once()
+- _send_text_command()
+- _set_scaled_pixmap()
+- call()
+- close()
+- closeEvent()
+- configure_qt_plugin_path()
+- drain_requests()
+- get_user_command()
+- launch()
+- make_group()
+- make_readonly_text()
+- resizeEvent()
+- set_cv_image()
+- set_rgbd()
+- set_state()
+- set_title()
+- show_status()
+
+## src/INTERFACE/interface_utils.py
+### imports
+- cv2
+- numpy
+### classes
+- Canvas
+  - __init__()
+  - rgb()
+  - inference()
+  - placeholder()
+  - _draw_caption()
+### functions
+- __init__()
+- _cv2_text_width()
+- _draw_caption()
+- _draw_object_marker()
+- _iter_detection_objects()
+- _make_bbox()
+- _split_long_word_for_cv2()
+- _wrap_text_for_cv2()
+- draw_detections()
+- draw_robot_markers()
+- draw_text_panel()
+- draw_yolo_world_boxes()
+- inference()
+- make_depth_view()
+- placeholder()
+- rgb()
+
+## src/INTERFACE/__init__.py
+### imports
+- interface_main.Interface
+- interface_pyqt5.InterfacePyQt5
+### classes
+- 없음
+### functions
+- 없음
+
+## src/INTERFACE/VoiceManager.py
+### imports
+- asyncio
+- edge_tts
+- numpy
+- os
+- pathlib.Path
+- shutil
+- sounddevice
+- soundfile
+- subprocess
+- tempfile
+- whisper
+### classes
+- VoiceManager
+  - __init__()
+  - speak()
+  - listen()
+  - _listen()
+  - _convert_mp3_to_wav()
+  - _make_play_command()
+  - _clean_text()
+  - _has_command()
+  - _report_audio_devices_once()
+  - _select_input_device()
+  - _select_auto_input_device()
+  - _get_device_sample_rate()
+- TTS
+  - __init__()
+  - speak()
+- WhisperSTT
+  - __init__()
+  - listen()
+### functions
+- __init__()
+- _clean_text()
+- _convert_mp3_to_wav()
+- _get_device_sample_rate()
+- _has_command()
+- _listen()
+- _make_play_command()
+- _report_audio_devices_once()
+- _select_auto_input_device()
+- _select_input_device()
+- listen()
+- speak()
+
+## src/INTERFACE/interface_main.py
+### imports
+- VoiceManager.VoiceManager
+- interface_pyqt5.InterfacePyQt5Process
+- numpy
+- pathlib.Path
+- queue
+- src.INTERFACE.VoiceManager.VoiceManager
+- src.INTERFACE.interface_pyqt5.InterfacePyQt5Process
+- sys
+- threading
+- time
+### classes
+- Interface
+  - __init__()
+  - _set_title()
+  - launch()
+  - run()
+  - close()
+  - _send()
+  - _send_handler()
+  - _voice()
+  - _voice_handler()
+  - _make_voice_manager()
+  - _load_command_handler()
+  - _recalibrate()
+  - _recalibrate_handler()
+  - _quit()
+  - _quit_handler()
+  - _perception()
+  - _perception_handler()
+  - _set_printOut()
+  - _set_VLM_summary()
+  - _set_action_seq()
+  - _set_user_command()
+  - get_current_user_command()
+  - _make_user_command()
+  - update()
+  - _start_tts()
+  - _stop_tts()
+  - _speak_result_text()
+  - _should_speak_result_text()
+  - _tts_loop()
+  - _set_rgbd()
+  - _set_cam_rgb()
+  - _set_cam_d()
+  - _set_yolo_robot_result()
+  - _set_yolo_world_result()
+  - _set_inference_rgbd()
+  - _is_inference_rgbd_data()
+  - start_camera_stream()
+  - stop_camera_stream()
+  - get_latest_camera_data()
+  - get_user_command()
+  - _handle_pyqt_command()
+### functions
+- __init__()
+- _handle_pyqt_command()
+- _is_inference_rgbd_data()
+- _load_command_handler()
+- _make_test_rgbd_data()
+- _make_user_command()
+- _make_voice_manager()
+- _perception()
+- _perception_handler()
+- _quit()
+- _quit_handler()
+- _recalibrate()
+- _recalibrate_handler()
+- _send()
+- _send_handler()
+- _set_VLM_summary()
+- _set_action_seq()
+- _set_cam_d()
+- _set_cam_rgb()
+- _set_inference_rgbd()
+- _set_printOut()
+- _set_rgbd()
+- _set_title()
+- _set_user_command()
+- _set_yolo_robot_result()
+- _set_yolo_world_result()
+- _should_speak_result_text()
+- _speak_result_text()
+- _start_tts()
+- _stop_tts()
+- _tts_loop()
+- _voice()
+- _voice_handler()
+- close()
+- get_current_user_command()
+- get_latest_camera_data()
+- get_user_command()
+- launch()
+- main()
+- run()
+- start_camera_stream()
+- stop_camera_stream()
+- update()
+
+## src/LLM_PLANNER/llm_planner_main.py
+### imports
+- ROBOT.robot_actions.get_available_actions
+- argparse
+- json
+- llm.LLM
+- src.LLM_PLANNER.llm.LLM
+- src.ROBOT.robot_actions.get_available_actions
+### classes
+- LLMPlanner
+  - __init__()
+  - launch()
+  - run()
+  - close()
+  - inference()
+  - _make_plan()
+  - _make_print_out()
+  - _make_selected_action_descriptions()
+  - _validate_action_sequence()
+  - _str()
+  - _cut()
+### functions
+- __init__()
+- _cut()
+- _make_plan()
+- _make_print_out()
+- _make_selected_action_descriptions()
+- _str()
+- _validate_action_sequence()
+- close()
+- inference()
+- launch()
+- main()
+- run()
+
+## src/LLM_PLANNER/__init__.py
+### imports
+- llm.LLM
+- llm_planner_main.LLMPlanner
+### classes
+- 없음
+### functions
+- 없음
+
+## src/LLM_PLANNER/llm.py
+### imports
+- json
+- ollama
+- re
+### classes
+- LLM
+  - __init__()
+  - inference()
+  - inference_json()
+  - _extract_json()
+### functions
+- __init__()
+- _extract_json()
+- inference()
+- inference_json()
+
+## trash/RGBD_CAM/RGB.py
+### imports
+- cv2
+- numpy
+- pathlib.Path
+- ultralytics.YOLO
+### classes
+- RGB
+  - __init__()
+  - _open_camera()
+  - get_frame()
+  - _read_rgb()
+  - _yolo_robot_inference()
+  - _yolo_world_inference()
+  - _get_depth_at()
+  - close()
+### functions
+- __init__()
+- _get_depth_at()
+- _open_camera()
+- _read_rgb()
+- _yolo_robot_inference()
+- _yolo_world_inference()
+- close()
+- get_frame()
+
+## trash/RGBD_CAM/RGBD.py
+### imports
+- YoloRobot.YoloRobotDetector
+- YoloWorld.YoloWorldDetector
+- cv2
+- glob
+- numpy
+- pyrealsense2
+- src.CALIBRATION.UVDRegressionModel
+### classes
+- RGBD
+  - __init__()
+  - get_frame()
+  - close()
+  - _open_camera()
+  - _open_opencv_camera()
+  - _find_camera()
+  - _make_camera_candidates()
+  - _try_open_camera()
+  - _setup_opencv_capture()
+  - _read_rgbd()
+  - _read_realsense()
+  - _read_opencv()
+  - set_yolo_world_classes()
+  - get_yolo_world_classes()
+  - set_yolo_world_enabled()
+  - is_yolo_world_enabled()
+  - set_calibration_prediction_enabled()
+  - is_calibration_prediction_enabled()
+  - _load_calibration_model()
+  - _calibration()
+### functions
+- __init__()
+- _calibration()
+- _find_camera()
+- _load_calibration_model()
+- _make_camera_candidates()
+- _open_camera()
+- _open_opencv_camera()
+- _read_opencv()
+- _read_realsense()
+- _read_rgbd()
+- _setup_opencv_capture()
+- _try_open_camera()
+- close()
+- get_frame()
+- get_yolo_world_classes()
+- is_calibration_prediction_enabled()
+- is_yolo_world_enabled()
+- set_calibration_prediction_enabled()
+- set_yolo_world_classes()
+- set_yolo_world_enabled()
+
+## trash/RGBD_CAM/RGBDService.py
+### imports
+- rgbd_cam_main.RGBD
+- src.srv.util.ProcessService
+### classes
+- RGBDService
+  - __init__()
+  - _process_main()
+  - get_frame()
+  - get_latest_camera_data()
+  - close()
+  - is_yolo_world_enabled()
+  - set_yolo_world_enabled()
+  - is_calibration_prediction_enabled()
+  - set_calibration_prediction_enabled()
+  - reload_calibration()
+  - _load_calibration_model()
+### functions
+- __init__()
+- _load_calibration_model()
+- _process_main()
+- close()
+- get_frame()
+- get_latest_camera_data()
+- is_calibration_prediction_enabled()
+- is_yolo_world_enabled()
+- reload_calibration()
+- set_calibration_prediction_enabled()
+- set_yolo_world_enabled()
+
+## trash/ROBOT/RobotManager.py
+### imports
+- re
+- robot_actions.RobotActions
+- subprocess
+### classes
+- ROBOT
+  - __init__()
+  - action()
+  - _normalize_action()
+  - get_calibration_poses()
+  - move_to_calibration_pose()
+  - move_to_base_pose()
+  - move_angle()
+  - get_pose()
+  - _get_move_target()
+  - move_to_uvd_offset()
+  - lift_current_pose()
+  - _make_offset_pose()
+  - _estimate_angle_offset()
+  - _extract_target_pose()
+  - _move_joint()
+  - _parse_get_pose_output()
+  - _find_object()
+  - _as_object_list()
+  - _visual_servo_step()
+  - _open_gripper()
+  - _close_gripper()
+### functions
+- __init__()
+- _as_object_list()
+- _close_gripper()
+- _estimate_angle_offset()
+- _extract_target_pose()
+- _find_object()
+- _get_move_target()
+- _make_offset_pose()
+- _move_joint()
+- _normalize_action()
+- _open_gripper()
+- _parse_get_pose_output()
+- _visual_servo_step()
+- action()
+- get_calibration_poses()
+- get_pose()
+- lift_current_pose()
+- main()
+- move_angle()
+- move_to_base_pose()
+- move_to_calibration_pose()
+- move_to_uvd_offset()
+
+## trash/ROBOT/RobotActionHandler.py
+### imports
+- 없음
+### classes
+- RobotActionHandler
+  - __init__()
+  - run_sequence()
+### functions
+- __init__()
+- run_sequence()
+
+## trash/ROBOT/RobotService.py
+### imports
+- RobotManager.ROBOT
+- src.srv.util.ProcessService
+### classes
+- RobotService
+  - __init__()
+  - _process_main()
+  - run_sequence()
+  - action()
+  - get_pose()
+  - move_angle()
+  - close()
+### functions
+- __init__()
+- _process_main()
+- action()
+- close()
+- get_pose()
+- move_angle()
+- run_sequence()
+
+## trash/vlm_updator/VLMWorldClassUpdater.py
+### imports
+- VLM.VLM
+- multiprocessing
+- queue.Empty
+- time
+### classes
+- VLMWorldClassUpdater
+  - __init__()
+  - start()
+  - submit_frame()
+  - get_latest_result()
+  - pause()
+  - resume()
+  - clear_queues()
+  - _clear_queue()
+  - close()
+- VLMWorldClassLoop
+  - __init__()
+  - run()
+  - _apply_result()
+### functions
+- __init__()
+- _apply_result()
+- _clear_queue()
+- _vlm_worker_loop()
+- clear_queues()
+- close()
+- get_latest_result()
+- pause()
+- resume()
+- run()
+- start()
+- submit_frame()
+
+## trash/vlm_updator/VLM.py
+### imports
+- PIL.Image
+- cv2
+- io
+- ollama
+- time
+### classes
+- VLM
+  - __init__()
+  - inference()
+  - infer_scene_and_objects()
+  - extract_object_classes()
+  - normalize_object_class()
+  - is_ignored_world_class()
+  - _frame_to_jpeg_bytes()
+### functions
+- __init__()
+- _frame_to_jpeg_bytes()
+- extract_object_classes()
+- infer_scene_and_objects()
+- inference()
+- is_ignored_world_class()
+- main()
+- normalize_object_class()
+
+## trash/vlm_updator/__init__.py
+### imports
+- VLM.VLM
+- VLMWorldClassUpdater.VLMWorldClassLoop
+- VLMWorldClassUpdater.VLMWorldClassUpdater
+### classes
+- 없음
+### functions
+- 없음
+
+## trash/LLM_PLANNER/LLM.py
+### imports
+- json
+- ollama
+- re
+### classes
+- LLM
+  - __init__()
+  - inference()
+  - inference_json()
+  - _extract_json()
+### functions
+- __init__()
+- _extract_json()
+- inference()
+- inference_json()
+- main()
+
+## trash/LLM_PLANNER/LLM_planner.py
+### imports
+- LLM.LLM
+- json
+- src.ROBOT.robot_actions.get_available_actions
+### classes
+- LLMPlanner
+  - __init__()
+  - inference()
+  - _make_plan()
+  - _make_print_out()
+  - _make_selected_action_descriptions()
+  - _validate_action_sequence()
+  - _str()
+  - _cut()
+  - _detected_object_names()
+### functions
+- __init__()
+- _cut()
+- _detected_object_names()
+- _make_plan()
+- _make_print_out()
+- _make_selected_action_descriptions()
+- _str()
+- _validate_action_sequence()
+- inference()
+- main()
+
+## trash/LLM_PLANNER/LLMService.py
+### imports
+- LLM_planner.LLMPlanner
+- src.srv.util.ProcessService
+### classes
+- LLMPlannerService
+  - __init__()
+  - _process_main()
+  - inference()
+  - close()
+### functions
+- __init__()
+- _process_main()
+- close()
+- inference()

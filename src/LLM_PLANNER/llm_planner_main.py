@@ -1,7 +1,13 @@
+import argparse
 import json
 
-from .LLM import LLM
-from src.ROBOT.robot_actions import get_available_actions
+try:
+    from src.LLM_PLANNER.llm import LLM
+    from src.ROBOT.robot_actions import get_available_actions
+except ImportError:
+    from .llm import LLM
+    from ..ROBOT.robot_actions import get_available_actions
+
 
 class LLMPlanner:
     def __init__(
@@ -13,6 +19,15 @@ class LLMPlanner:
 
         self.llm = llm
         self.available_actions = get_available_actions()
+
+    def launch(self):
+        return True
+
+    def run(self, *args, **kwargs):
+        return self.inference(*args, **kwargs)
+
+    def close(self):
+        return True
 
     def inference(
         self,
@@ -44,7 +59,6 @@ class LLMPlanner:
         action_sequence = self._validate_action_sequence(
             action_sequence=action_sequence,
             available_actions=self.available_actions,
-            yolo_world=yolo_world,
         )
 
         print_out = self._make_print_out(
@@ -331,14 +345,11 @@ Return only JSON:
         self,
         action_sequence,
         available_actions,
-        yolo_world=None,
     ):
         if not isinstance(action_sequence, list):
             return []
 
         allowed_names = set(available_actions.keys())
-        object_required_names = {"MOV", "MVA", "GRB"}
-        detected_names = self._detected_object_names(yolo_world)
 
         result = []
 
@@ -351,13 +362,6 @@ Return only JSON:
 
             if name not in allowed_names:
                 continue
-
-            if name in object_required_names:
-                if obj == "":
-                    continue
-
-                if obj not in detected_names:
-                    continue
 
             clean_action = {"name": name}
 
@@ -385,26 +389,6 @@ Return only JSON:
             return text
 
         return text[:n]
-
-    def _detected_object_names(self, yolo_world):
-        if isinstance(yolo_world, dict):
-            yolo_world = [yolo_world]
-
-        if not isinstance(yolo_world, list):
-            return set()
-
-        names = set()
-
-        for item in yolo_world:
-            if not isinstance(item, dict):
-                continue
-
-            name = self._str(item.get("name")).lower()
-
-            if name != "":
-                names.add(name)
-
-        return names
 
 ##########################################################################################################
 

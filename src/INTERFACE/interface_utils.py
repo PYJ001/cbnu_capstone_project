@@ -170,7 +170,105 @@ def _iter_detection_objects(detections):
     return []
 
 
-def draw_detections(frame, yolo_robot, yolo_world):
+class Canvas:
+    def __init__(self):
+        pass
+
+    def rgb(self, frame):
+        if frame is None:
+            return None
+
+        return frame.copy()
+
+    def inference(self, frame, yolo_world=None, yolo_robot=None, vlm_summary=""):
+        if frame is None:
+            return None
+
+        canvas = frame.copy()
+        canvas = draw_robot_markers(canvas, yolo_robot)
+        canvas = draw_yolo_world_boxes(canvas, yolo_world)
+
+        return canvas
+
+    def placeholder(self, target_shape, text="Inference image"):
+        target_h, target_w = target_shape[:2]
+        canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+        self._draw_caption(canvas, text)
+        return canvas
+
+    def _draw_caption(self, canvas, text):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        thickness = 1
+        margin = 10
+        max_w = canvas.shape[1] - margin * 2
+        lines = _wrap_text_for_cv2(
+            text=text,
+            max_text_w=max_w,
+            font=font,
+            font_scale=font_scale,
+            thickness=thickness,
+        )
+        lines = lines[:3]
+
+        if not lines:
+            return
+
+        panel_h = 24 + 20 * len(lines)
+        overlay = canvas.copy()
+        cv2.rectangle(
+            overlay,
+            (0, 0),
+            (canvas.shape[1], panel_h),
+            (0, 0, 0),
+            -1,
+        )
+        cv2.addWeighted(overlay, 0.55, canvas, 0.45, 0, canvas)
+
+        y = 24
+        for line in lines:
+            cv2.putText(
+                canvas,
+                line,
+                (margin, y),
+                font,
+                font_scale,
+                (245, 248, 252),
+                thickness,
+                cv2.LINE_AA,
+            )
+            y += 20
+
+
+def draw_yolo_world_boxes(frame, yolo_world):
+    vis = frame.copy()
+
+    for obj in _iter_detection_objects(yolo_world):
+        if not isinstance(obj, dict):
+            continue
+
+        name = obj.get("name", "object")
+        u = int(obj.get("u", 0))
+        v = int(obj.get("v", 0))
+        d = obj.get("d", None)
+        bbox = _make_bbox(obj, vis.shape)
+
+        _draw_object_marker(
+            vis=vis,
+            name=name,
+            u=u,
+            v=v,
+            d=d,
+            bbox=bbox,
+            color=(0, 220, 255),
+            text_offset=(8, 20),
+            thickness=3,
+        )
+
+    return vis
+
+
+def draw_robot_markers(frame, yolo_robot):
     vis = frame.copy()
 
     for obj in _iter_detection_objects(yolo_robot):
@@ -181,51 +279,84 @@ def draw_detections(frame, yolo_robot, yolo_world):
         u = int(obj.get("u", 0))
         v = int(obj.get("v", 0))
         d = obj.get("d", None)
+        bbox = obj.get("bbox")
 
-        cv2.circle(vis, (u, v), 6, (0, 255, 0), -1)
-
-        text = f"{name} ({u},{v})"
-        if d is not None:
-            text += f" d={d:.3f}"
-
-        cv2.putText(
-            vis,
-            text,
-            (u + 8, v - 8),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            (0, 255, 0),
-            2,
-            cv2.LINE_AA,
-        )
-
-    for obj in _iter_detection_objects(yolo_world):
-        if not isinstance(obj, dict):
-            continue
-
-        name = obj.get("name", "object")
-        u = int(obj.get("u", 0))
-        v = int(obj.get("v", 0))
-        d = obj.get("d", None)
-
-        cv2.circle(vis, (u, v), 6, (0, 200, 255), -1)
-
-        text = f"{name} ({u},{v})"
-        if d is not None:
-            text += f" d={d:.3f}"
-
-        cv2.putText(
-            vis,
-            text,
-            (u + 8, v + 20),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            (0, 200, 255),
-            2,
-            cv2.LINE_AA,
+        _draw_object_marker(
+            vis=vis,
+            name=name,
+            u=u,
+            v=v,
+            d=d,
+            bbox=bbox,
+            color=(0, 255, 0),
+            text_offset=(8, -8),
+            thickness=2,
         )
 
     return vis
+
+
+def draw_detections(frame, yolo_robot, yolo_world):
+    vis = draw_robot_markers(frame, yolo_robot)
+    vis = draw_yolo_world_boxes(vis, yolo_world)
+    return vis
+
+
+def _make_bbox(obj, shape):
+    bbox = obj.get("bbox")
+
+    if bbox is not None and len(bbox) >= 4:
+        return bbox
+
+    h, w = shape[:2]
+    u = int(obj.get("u", w // 2))
+    v = int(obj.get("v", h // 2))
+    half_w = max(20, w // 20)
+    half_h = max(20, h // 20)
+    return [
+        max(0, u - half_w),
+        max(0, v - half_h),
+        min(w - 1, u + half_w),
+        min(h - 1, v + half_h),
+    ]
+
+
+def _draw_object_marker(
+    vis,
+    name,
+    u,
+    v,
+    d,
+    bbox,
+    color,
+    text_offset,
+    thickness=2,
+):
+    if bbox is not None and len(bbox) >= 4:
+        x1, y1, x2, y2 = [int(float(value)) for value in bbox[:4]]
+        cv2.rectangle(vis, (x1, y1), (x2, y2), color, thickness)
+        text_origin = (x1, max(18, y1 - 8))
+    else:
+        cv2.circle(vis, (u, v), 6, color, -1)
+        text_origin = (u + text_offset[0], v + text_offset[1])
+
+    text = f"{name} ({u},{v})"
+    if d is not None:
+        try:
+            text += f" d={float(d):.3f}"
+        except Exception:
+            text += f" d={d}"
+
+    cv2.putText(
+        vis,
+        text,
+        text_origin,
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        color,
+        max(1, thickness),
+        cv2.LINE_AA,
+    )
 
 
 def make_depth_view(depth, target_shape):

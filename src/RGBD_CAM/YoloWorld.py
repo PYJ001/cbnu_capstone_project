@@ -1,4 +1,5 @@
 import threading
+from collections import deque
 
 import numpy as np
 from ultralytics import YOLO
@@ -139,10 +140,10 @@ class YoloWorldDetector:
                 seen.add(prompt_name)
                 result.append(prompt_name)
 
-                if len(result) >= 10:
+                if len(result) >= 15:
                     break
 
-            if len(result) >= 10:
+            if len(result) >= 15:
                 break
 
         return result
@@ -212,3 +213,73 @@ class YoloWorldDetector:
             return None
 
         return float(np.median(valid))
+
+
+class YoloWorld:
+    def __init__(self, *args, **kwargs):
+        self.detector = YoloWorldDetector(*args, **kwargs)
+        self.class_queue = deque(maxlen=15)
+
+    def inference(self, frame, depth):
+        return self.detector.inference(frame, depth)
+
+    def set_classes(self, classes):
+        return self.detector.set_classes(classes)
+
+    def get_classes(self):
+        return self.detector.get_classes()
+
+    def add_classes_from_vlm(self, objects):
+        for object_name in objects or []:
+            clean_name = self._clean_vlm_class(object_name)
+
+            if clean_name == "":
+                continue
+
+            try:
+                self.class_queue.remove(clean_name)
+            except ValueError:
+                pass
+
+            self.class_queue.append(clean_name)
+
+        classes = list(self.class_queue)
+        self.set_classes(classes)
+        return classes
+
+    def set_enabled(self, enabled):
+        return self.detector.set_enabled(enabled)
+
+    def is_enabled(self):
+        return self.detector.is_enabled()
+
+    def _clean_vlm_class(self, object_name):
+        name = str(object_name).strip().lower()
+        name = " ".join(name.split())
+
+        if name in ["", "none", "nothing", "no objects", "n/a"]:
+            return ""
+
+        if self._is_human_class(name):
+            return ""
+
+        return name
+
+    def _is_human_class(self, class_name):
+        human_keywords = [
+            "person",
+            "people",
+            "human",
+            "man",
+            "woman",
+            "boy",
+            "girl",
+            "face",
+            "head",
+            "body",
+            "arm",
+            "leg",
+            "torso",
+        ]
+
+        return any(keyword in class_name for keyword in human_keywords)

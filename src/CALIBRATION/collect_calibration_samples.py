@@ -29,6 +29,10 @@ def main():
             settle_time         = args.settle_time,
             warmup_frames       = args.warmup_frames,
             sample_hz           = args.sample_hz,
+            max_samples_per_pose= args.max_samples_per_pose,
+            max_attempts_per_pose=args.max_attempts_per_pose,
+            min_uv_distance     = args.min_uv_distance,
+            sample_while_moving = args.sample_while_moving,
             min_robot_conf      = args.min_robot_conf,
             require_valid_depth = not args.allow_empty_depth,
             save_rejected_every = args.save_rejected_every,
@@ -43,20 +47,29 @@ def main():
 def collect_calibration_samples(
     robot,
     rgbd_cam,
-    output_dir="src/CALIBRATION/robot_camera_calibration_samples",
-    cycles=1,
-    move_duration=1.5,
-    settle_time=1.0,
-    warmup_frames=3,
-    sample_hz=10.0,
-    min_robot_conf=0.45,
-    require_valid_depth=True,
-    save_rejected_every=20,
-    return_home=False,
-    capture_callback=None,
+    output_dir            = "src/CALIBRATION/robot_camera_calibration_samples",
+    cycles                = 1,
+    move_duration         = 1.5,
+    settle_time           = 1.0,
+    warmup_frames         = 3,
+    sample_hz             = 10.0,
+    max_samples_per_pose  = None,
+    max_attempts_per_pose = None,
+    min_uv_distance       = 0.0,
+    sample_while_moving   = True,
+    min_robot_conf        = 0.45,
+    require_valid_depth   = True,
+    save_rejected_every   = 20,
+    return_home           = False,
+    capture_callback      = None,
 ):
-    sample_hz = max(0.1, float(sample_hz))
-    save_rejected_every = max(0, int(save_rejected_every))
+    sample_hz             = max(0.1, float(sample_hz))
+    save_rejected_every   = max(0, int(save_rejected_every))
+    if max_samples_per_pose is not None:
+        max_samples_per_pose = max(1, int(max_samples_per_pose))
+    if max_attempts_per_pose is not None:
+        max_attempts_per_pose = max(1, int(max_attempts_per_pose))
+    min_uv_distance       = max(0.0, float(min_uv_distance))
 
     out_dir = Path(output_dir) / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -81,11 +94,14 @@ def collect_calibration_samples(
         "robot_bbox",
         "image_path",
     ]
-
-    sample_idx = 0
-    attempt_idx = 0
-    accepted_count = 0
-    rejected_count = 0
+    
+    sample_idx         = 0
+    attempt_idx        = 0
+    accepted_count     = 0
+    rejected_count     = 0
+    skipped_pose_count = 0
+    duplicate_count    = 0
+    accepted_uvds      = []
     period = 1.0 / sample_hz
 
     with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
@@ -100,6 +116,11 @@ def collect_calibration_samples(
 
                 print(f"[CALIB] cycle={cycle_idx} pose={pose_idx} {pose_name}")
 
+                if not is_reachable_pose(robot, pose):
+                    skipped_pose_count += 1
+                    print(f"[CALIB] skip unreachable/invalid pose: {pose_name}")
+                    continue
+
                 move_result = {"ok": None}
                 move_thread = threading.Thread(
                     target=_move_to_calibration_pose_worker,
@@ -109,8 +130,19 @@ def collect_calibration_samples(
                 move_thread.start()
 
                 accepted_for_pose = 0
+                attempts_for_pose = 0
                 pose_start_time = time.time()
-                capture_until = pose_start_time + move_duration + settle_time
+                move_deadline = pose_start_time + move_duration
+                capture_start = (
+                    pose_start_time
+                    if sample_while_moving
+                    else move_deadline + settle_time
+                )
+                capture_until = move_deadline + settle_time + (
+                    (max_attempts_per_pose * period)
+                    if max_attempts_per_pose is not None
+                    else 0.0
+                )
                 next_sample_time = pose_start_time
 
                 while move_thread.is_alive() or time.time() < capture_until:
@@ -123,12 +155,33 @@ def collect_calibration_samples(
 
                     now = time.time()
 
+                    if now < capture_start:
+                        time.sleep(min(0.02, capture_start - now))
+                        continue
+
+                    if not sample_while_moving and move_thread.is_alive():
+                        time.sleep(0.02)
+                        continue
+
+                    if (
+                        max_samples_per_pose is not None
+                        and accepted_for_pose >= max_samples_per_pose
+                    ):
+                        break
+
                     if now < next_sample_time:
                         time.sleep(min(0.01, next_sample_time - now))
                         continue
 
                     next_sample_time += period
                     attempt_idx += 1
+                    attempts_for_pose += 1
+
+                    if (
+                        max_attempts_per_pose is not None
+                        and attempts_for_pose > max_attempts_per_pose
+                    ):
+                        break
 
                     if capture_callback is None:
                         frame, depth, yolo_robot = capture_robot_detection(
@@ -152,14 +205,14 @@ def collect_calibration_samples(
                             and rejected_count % save_rejected_every == 0
                         ):
                             save_rejected_image(
-                                out_dir=rejected_dir,
-                                attempt_idx=attempt_idx,
-                                cycle_idx=cycle_idx,
-                                pose_idx=pose_idx,
-                                pose_name=pose_name,
-                                frame=frame,
-                                yolo_robot=yolo_robot,
-                                reason=validation_error,
+                                out_dir     = rejected_dir,
+                                attempt_idx = attempt_idx,
+                                cycle_idx   = cycle_idx,
+                                pose_idx    = pose_idx,
+                                pose_name   = pose_name,
+                                frame       = frame,
+                                yolo_robot  = yolo_robot,
+                                reason      = validation_error,
                             )
 
                         print(
@@ -169,32 +222,52 @@ def collect_calibration_samples(
                         )
                         continue
 
+                    if is_duplicate_uvd(
+                        yolo_robot=yolo_robot,
+                        accepted_uvds=accepted_uvds,
+                        min_uv_distance=min_uv_distance,
+                    ):
+                        duplicate_count += 1
+                        print(
+                            "[CALIB] duplicate "
+                            f"pose={pose_name} frame={attempt_idx}: "
+                            f"u={yolo_robot.get('u')} v={yolo_robot.get('v')}"
+                        )
+                        continue
+
                     actual_joints = robot.get_pose()
                     sample_idx += 1
                     accepted_for_pose += 1
                     accepted_count += 1
 
                     image_path = save_sample_image(
-                        out_dir=out_dir,
-                        sample_idx=sample_idx,
-                        cycle_idx=cycle_idx,
-                        pose_idx=pose_idx,
-                        pose_name=pose_name,
-                        frame=frame,
-                        yolo_robot=yolo_robot,
+                        out_dir    = out_dir,
+                        sample_idx = sample_idx,
+                        cycle_idx  = cycle_idx,
+                        pose_idx   = pose_idx,
+                        pose_name  = pose_name,
+                        frame      = frame,
+                        yolo_robot = yolo_robot,
                     )
 
                     row = make_csv_row(
-                        sample_idx=sample_idx,
-                        cycle_idx=cycle_idx,
-                        pose_idx=pose_idx,
-                        pose_name=pose_name,
-                        joints=actual_joints,
-                        yolo_robot=yolo_robot,
-                        image_path=image_path,
+                        sample_idx = sample_idx,
+                        cycle_idx  = cycle_idx,
+                        pose_idx   = pose_idx,
+                        pose_name  = pose_name,
+                        joints     = actual_joints,
+                        yolo_robot = yolo_robot,
+                        image_path = image_path,
                     )
                     writer.writerow(row)
                     csv_file.flush()
+                    accepted_uvds.append(
+                        (
+                            float(row["robot_u"]),
+                            float(row["robot_v"]),
+                            parse_float(row["robot_d"]),
+                        )
+                    )
 
                     elapsed = time.time() - pose_start_time
                     print(
@@ -219,13 +292,14 @@ def collect_calibration_samples(
     print(
         "[CALIB] summary "
         f"accepted={accepted_count} rejected={rejected_count} "
+        f"duplicates={duplicate_count} skipped_poses={skipped_pose_count} "
         f"csv={csv_path}"
     )
     write_calibration_report(
-        csv_path=csv_path,
-        out_dir=out_dir,
-        accepted_count=accepted_count,
-        rejected_count=rejected_count,
+        csv_path       = csv_path,
+        out_dir        = out_dir,
+        accepted_count = accepted_count,
+        rejected_count = rejected_count,
     )
 
     return csv_path
@@ -239,6 +313,10 @@ def parse_args():
     parser.add_argument("--settle-time", type=float, default=1.0)
     parser.add_argument("--warmup-frames", type=int, default=3)
     parser.add_argument("--sample-hz", type=float, default=10.0)
+    parser.add_argument("--max-samples-per-pose", type=int, default=2)
+    parser.add_argument("--max-attempts-per-pose", type=int, default=8)
+    parser.add_argument("--min-uv-distance", type=float, default=24.0)
+    parser.add_argument("--sample-while-moving", action="store_true")
     parser.add_argument("--min-robot-conf", type=float, default=0.45)
     parser.add_argument("--save-rejected-every", type=int, default=20)
     parser.add_argument("--allow-empty-depth", action="store_true")
@@ -266,6 +344,49 @@ def _move_to_calibration_pose_worker(robot, pose, move_duration, result):
     except Exception as e:
         result["ok"] = False
         result["error"] = str(e)
+
+
+def is_reachable_pose(robot, pose):
+    joints = pose.get("joints") if isinstance(pose, dict) else pose
+
+    if joints is None or len(joints) != 5:
+        return False
+
+    try:
+        values = [float(value) for value in joints]
+    except Exception:
+        return False
+
+    if hasattr(robot, "_validate_pose"):
+        try:
+            return bool(robot._validate_pose(values))
+        except Exception:
+            return False
+
+    return True
+
+
+def is_duplicate_uvd(yolo_robot, accepted_uvds, min_uv_distance):
+    if min_uv_distance <= 0:
+        return False
+
+    if not accepted_uvds:
+        return False
+
+    u = parse_float(yolo_robot.get("u"))
+    v = parse_float(yolo_robot.get("v"))
+
+    if u is None or v is None:
+        return False
+
+    for prev_u, prev_v, _prev_d in accepted_uvds:
+        du = u - prev_u
+        dv = v - prev_v
+
+        if (du ** 2 + dv ** 2) ** 0.5 < min_uv_distance:
+            return True
+
+    return False
 
 
 def validate_robot_detection(yolo_robot, min_robot_conf=0.45, require_valid_depth=True):

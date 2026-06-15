@@ -1,8 +1,6 @@
 import json
 import re
 
-import ollama
-
 
 class LLM:
     def __init__(
@@ -20,6 +18,8 @@ class LLM:
 
     def inference(self, text, max_tokens=256):
         try:
+            import ollama
+
             response = ollama.chat(
                 model=self.model_name,
                 messages=[
@@ -37,8 +37,8 @@ class LLM:
 
             return response["message"]["content"].strip()
 
-        except Exception as e:
-            print(f"[LLM] inference failed: {e}")
+        except Exception as exc:
+            print(f"[LLM] inference failed: {exc}")
             return ""
 
     def inference_json(self, text, default=None, max_tokens=256):
@@ -55,7 +55,6 @@ class LLM:
 
         try:
             return json.loads(output)
-
         except json.JSONDecodeError:
             return self._extract_json(output, default)
 
@@ -67,13 +66,5 @@ class LLM:
 
         try:
             return json.loads(match.group(0))
-
         except json.JSONDecodeError:
             return default
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()

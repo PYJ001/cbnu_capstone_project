@@ -14,6 +14,8 @@ trash0608/
 
 robot_camera_calibration_samples/*/sample_*.jpg
 robot_camera_calibration_samples/*/rejected/
+src/CALIBRATION/robot_camera_calibration_samples/*/sample_*.jpg
+src/CALIBRATION/robot_camera_calibration_samples/*/rejected/
 
 runs/**
 !runs/end_effector_yolo12n_416_safe/

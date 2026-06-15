@@ -1,14 +1,4 @@
-import threading
-
-from src.RGBD_CAM    import RGBDService
-from src.LLM_PLANNER import LLMPlannerService
-from src.ROBOT       import RobotService
-
-from src.ProjectController import ProjectController
-from src.INTERFACE   import Interface
-
-class RobotApp:
-    _RobotApp_description = """
+_RobotApp_description = """
     RobotApp is the process/service manager for the whole robot system.
 
     Treat this class like a small ROS-style runtime:
@@ -28,38 +18,6 @@ class RobotApp:
     and cross-module ownership are coordinated.
     """
 
-    def __init__(self):
-#        camera_backend     = "realsense"
-#        rgb_camera_index   = "/dev/video6"
-#        depth_camera_index = 0
-
-        ##################################################################
-        # robot       : Controller for robot. includes and handler.
-        # llm_planner : Orchestrates the input from the interface and RGBD
-        #               camera and generates the command for the robot. 
-        # rgbd_cam    : Camera module. It uses YOLO and VLM model.  
-        #               returns the data for the llm_planner.
-        # interface   : Interface. uses mike, speaker, pyQt5, keyboard and mouse
-        ##################################################################
-
-
-
-        # Core services. These are created once and owned by RobotApp.
-        self.rgbd_cam           = RGBDService()
-        self.llm_planner        = LLMPlannerService()
-        self.robot              = RobotService()
-
-        # interface
-        self.interface          = Interface()
-        #project_controller
-        self.shutdown_event = threading.Event()
-        self.project_controller = ProjectController(
-            robot       = self.robot,
-            llm_planner = self.llm_planner,
-            rgbd_cam    = self.rgbd_cam,
-            interface   = self.interface,
-            stop_event  = self.shutdown_event,
-        )
 
     ######################################################################
     # Intended data flow
@@ -70,8 +28,9 @@ class RobotApp:
     #
     # 2. ProjectController wakes up.
     #    - command = interface.get_user_command(timeout=...)
-    #    - camera_data = interface.get_latest_camera_data()
-    #      or rgbd_cam.get_frame() if a fresh blocking snapshot is required.
+    #    - rgbd_frame = rgbd_cam.get_latest_rgbd_frame()
+    #      or rgbd_cam.capture_rgbd_frame() for a fresh blocking UI frame.
+    #    - perception_data = project_controller requests VLM/YOLO when needed.
     #    - Extract:
     #        vlm_summary
     #        yolo_robot
@@ -82,7 +41,7 @@ class RobotApp:
     #    - Interface is updated with user command, detections, plan,
     #      and natural language response.
     #
-    # 4. RobotActionHandler executes actions serially.
+    # 4. robot_main.ROBOT executes actions serially.
     #    - Robot movement must be one-at-a-time.
     #    - For each action in action_sequence:
     #        robot.action(action, rgbd_cam=rgbd_cam)
@@ -99,10 +58,47 @@ class RobotApp:
     #   close Interface/TTS/Qt
     ######################################################################
 
+
+import threading
+
+from src.CALIBRATION.calibration_main import CalibrationModel
+from src.INTERFACE.interface_main      import Interface
+from src.LLM_PLANNER.llm_planner_main  import LLMPlanner
+from src.ProjectController             import ProjectController
+from src.RGBD_CAM.rgbd_cam_main        import RGBD
+from src.ROBOT.robot_main              import ROBOT
+
+class RobotApp:
+
+    def __init__(self):
+#        camera_backend     = "realsense"
+#        rgb_camera_index   = "/dev/video6"
+#        depth_camera_index = 0
+
+        self.rgbd_cam           = RGBD()
+        self.llm_planner        = LLMPlanner()
+        self.robot              = ROBOT()
+        self.calibration_model  = CalibrationModel()
+        
+        self.interface          = Interface()
+        self.shutdown_event     = threading.Event()
+        self.project_controller = ProjectController(
+            robot             = self.robot,
+            llm_planner       = self.llm_planner,
+            rgbd_cam          = self.rgbd_cam,
+            interface         = self.interface,
+            calibration_model = self.calibration_model,
+            stop_event        = self.shutdown_event,
+        )
+        # RGBD -> ProjectController -> Interface/PyQt functional test.
+        # self.project_controller.test()
+
+    def test(self, duration=None, hz=10.0):
+        return self.project_controller.test(duration=duration, hz=hz)
+
     def run(self):
         """
         Start the application runtime.
-
         PyQt must stay on the main thread. ProjectController runs in a
         background thread and consumes Interface commands.
         """
@@ -110,19 +106,19 @@ class RobotApp:
             self.rgbd_cam.launch()
             self.llm_planner.launch()
             self.robot.launch()
+            self.calibration_model.launch()
 
-            self.interface.start_camera_stream(self.rgbd_cam)
+            self.interface.launch(self.rgbd_cam)
             self.project_controller.launch()
-            return self.interface.run()
+            self.interface.run()
 
+        except KeyboardInterrupt:
+            print("[RobotApp] interrupted. Shutting down.")
 
         finally:
             self.close()
 
     def close(self):
-        """
-        Stop every service owned by RobotApp.
-        """
         self.shutdown_event.set()
 
         self.project_controller.join(timeout=1.0)
@@ -130,4 +126,5 @@ class RobotApp:
 
         self.robot.close()
         self.llm_planner.close()
+        self.calibration_model.close()
         self.rgbd_cam.close()
