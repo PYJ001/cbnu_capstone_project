@@ -30,7 +30,7 @@ class ROBOT:
         self,
         dry_run=False,
         command_timeout=None,
-        validate_limits=True,
+        validate_limits=False,
     ):
         self.base_pose = [0.0, -1.000155, 1.000155, 0.0, 0.0]
         self.current_pose = self.base_pose.copy()
@@ -43,10 +43,10 @@ class ROBOT:
         self.move_history = []
         self.joint_limits = {
             "j1": (-3.14, 3.14),
-            "j2": (-1.5, 1.5),
-            "j3": (-1.5, 1.5),
-            "j4": (-1.5, 1.5),
-            "gripper": (-0.01, 0.019),
+            "j2": (-3.14, 3.14),
+            "j3": (-3.14, 3.14),
+            "j4": (-3.14, 3.14),
+            "gripper": (-0.05, 0.05),
         }
 
         self.ros_setup_cmd = (
@@ -215,10 +215,12 @@ class ROBOT:
         if isinstance(action, int):
             table = {
                 0: "DNC",
-                1: "WAV",
-                2: "GRB",
-                3: "REL",
-                4: "MOV",
+                1: "GRB",
+                2: "REL",
+                3: "MOV",
+                4: "MVA",
+                5: "PRN",
+                6: "STD",
             }
             return table.get(action, "UNKNOWN"), None
 
@@ -314,9 +316,6 @@ class ROBOT:
             float(gripper),
         ]
         duration = float(duration)
-
-        if not self._validate_pose(pose):
-            return False
 
         if self.dry_run:
             self.current_pose = pose.copy()

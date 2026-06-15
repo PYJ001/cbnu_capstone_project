@@ -4,22 +4,24 @@ from .MotionTrajectory import find_latest_motion_csv, replay_motion_csv
 
 """
 DNC : dance
-WAV : wave hand
-SKH : wave hand alias
 MOV : move to object
 MVA : move above object
 GRB : grab object
 REL : release
-TRW : release alias
+TRW : throw away / discard
 LFT : lift from current pose
 THR : throw object
 HRT : draw heart
 HND : hand over to camera/person
+PRN : prone / lie down
+STD : stand up straight
 """
 
-MOVE_ABOVE_ANGLE_OFFSET     = [0.0, -0.24, 0.21, -0.07]
-GRASP_PRE_ANGLE_OFFSET      = [0.0, -0.28, 0.25, -0.08]
-GRASP_APPROACH_ANGLE_OFFSET = [0.0, -0.04, 0.04, -0.01]
+MOVE_ABOVE_ANGLE_OFFSET = [0.0, -0.24, 0.21, -0.07]
+THROW_AWAY_POSE = [0.65, -0.62, 0.78, -0.34, 0.0]
+HAND_OVER_POSE = [0.0, -0.55, 0.85, -0.45, 0.0]
+PRONE_POSE = [0.0, 1.0, 0.0, 0.0, 0.0]
+STAND_POSE = [0.0, 0.0, 0.0, 0.0, 0.0]
 
 
 class RobotActions:
@@ -32,34 +34,34 @@ class RobotActions:
 
     descriptions = {
         "DNC": "dance",
-        "WAV": "wave hand",
-        "SKH": "wave hand",
         "MOV": "move to object",
         "MVA": "move above object",
         "GRB": "grab object",
         "REL": "release",
-        "TRW": "release",
+        "TRW": "throw away",
         "LFT": "lift",
         "THR": "throw",
         "HRT": "draw heart",
         "HND": "hand over to camera or person",
+        "PRN": "lie down",
+        "STD": "stand up straight",
     }
 
     def __init__(self, robot):
         self.robot = robot
         self.registry = {
             "DNC": self.dance,
-            "WAV": self.wave_hand,
-            "SKH": self.shake_hand,
             "MOV": self.move_to_object,
             "MVA": self.move_above_object,
             "GRB": self.grab,
             "REL": self.release,
-            "TRW": self.release,
+            "TRW": self.throw_away,
             "LFT": self.lift,
             "THR": self.throw,
             "HRT": self.draw_heart,
             "HND": self.hand_over,
+            "PRN": self.lie_down,
+            "STD": self.stand_up,
         }
 
     def run(self, action_name, obj=None, rgbd_cam=None):
@@ -80,7 +82,7 @@ class RobotActions:
         return self.registry.get(action_name)
 
     def dance(self, obj=None, rgbd_cam=None):
-        result = self._run_recorded_motion("dance")
+        result = self._run_recorded_motion("dance", speed=3.0)
 
         if result is not None:
             return result
@@ -94,25 +96,6 @@ class RobotActions:
         ]
 
         return self._run_pose_sequence(poses, duration=0.8, sleep=0.15)
-
-    def wave_hand(self, obj=None, rgbd_cam=None):
-        result = self._run_recorded_motion("wave_hand")
-
-        if result is not None:
-            return result
-
-        poses = [
-            [0.0, -0.85, 1.05, -0.25, 0.0],
-            [0.0, -0.75, 1.00, -0.35, 0.0],
-            [0.0, -0.85, 1.05, -0.25, 0.0],
-            [0.0, -0.75, 1.00, -0.35, 0.0],
-            self.robot.base_pose,
-        ]
-
-        return self._run_pose_sequence(poses, duration=0.8, sleep=0.15)
-
-    def shake_hand(self, obj=None, rgbd_cam=None):
-        return self.wave_hand(obj=obj, rgbd_cam=rgbd_cam)
 
     def move_to_object(self, obj=None, rgbd_cam=None):
         if obj is None:
@@ -154,24 +137,7 @@ class RobotActions:
 
         steps = [
             (self.robot._open_gripper, (), {}),
-            (
-                self.robot.move_to_uvd_offset,
-                (target_obj,),
-                {
-                    "angle_offset": GRASP_PRE_ANGLE_OFFSET,
-                    "gripper": self.robot.gripper_open,
-                    "duration": 1.2,
-                },
-            ),
-            (
-                self.robot.move_to_uvd_offset,
-                (target_obj,),
-                {
-                    "angle_offset": GRASP_APPROACH_ANGLE_OFFSET,
-                    "gripper": self.robot.gripper_open,
-                    "duration": 1.2,
-                },
-            ),
+            (self.move_to_object, (target_obj,), {}),
             (self.robot._close_gripper, (), {}),
             (self.robot.lift_current_pose, (), {}),
         ]
@@ -192,6 +158,28 @@ class RobotActions:
 
     def lift(self, obj=None, rgbd_cam=None):
         ok = self.robot.lift_current_pose()
+        return "success" if ok else "failed"
+
+    def throw_away(self, obj=None, rgbd_cam=None):
+        if obj is not None:
+            result = self.grab(obj=obj, rgbd_cam=rgbd_cam)
+
+            if result != "success":
+                return result
+
+        ok = self.robot._move_joint(*THROW_AWAY_POSE, duration=1.0)
+
+        if not ok:
+            return "failed"
+
+        time.sleep(0.15)
+        ok = self.robot._open_gripper()
+
+        if not ok:
+            return "failed"
+
+        time.sleep(0.15)
+        ok = self.robot.move_to_base_pose(duration=1.0)
         return "success" if ok else "failed"
 
     def throw(self, obj=None, rgbd_cam=None):
@@ -216,7 +204,7 @@ class RobotActions:
         return "success" if ok else "failed"
 
     def draw_heart(self, obj=None, rgbd_cam=None):
-        result = self._run_recorded_motion("heart")
+        result = self._run_recorded_motion("heart", speed=2.0)
 
         if result is not None:
             return result
@@ -235,15 +223,29 @@ class RobotActions:
         return self._run_pose_sequence(poses, duration=0.55, sleep=0.06)
 
     def hand_over(self, obj=None, rgbd_cam=None):
-        ok = self.robot._move_joint(
-            0.0,
-            -0.55,
-            0.85,
-            -0.45,
-            0.0,
-            duration=1.0,
-        )
+        if obj is not None:
+            result = self.grab(obj=obj, rgbd_cam=rgbd_cam)
 
+            if result != "success":
+                return result
+
+        ok = self.robot._move_joint(*HAND_OVER_POSE, duration=1.0)
+
+        if not ok:
+            return "failed"
+
+        time.sleep(0.15)
+        ok = self.robot._open_gripper()
+        return "success" if ok else "failed"
+
+    def lie_down(self, obj=None, rgbd_cam=None):
+        ok = self.robot._move_joint(*PRONE_POSE, duration=1.0)
+        time.sleep(1.0)
+        return "success" if ok else "failed"
+
+    def stand_up(self, obj=None, rgbd_cam=None):
+        ok = self.robot._move_joint(*STAND_POSE, duration=1.0)
+        time.sleep(1.0)
         return "success" if ok else "failed"
 
     def _run_pose_sequence(self, poses, duration=0.8, sleep=0.1):
@@ -257,14 +259,17 @@ class RobotActions:
 
         return "success"
 
-    def _run_recorded_motion(self, name):
+    def _run_recorded_motion(self, name, speed=1.0):
         csv_path = find_latest_motion_csv(name)
 
         if csv_path is None:
             return None
 
-        print(f"[RobotActions] replay recorded motion: {name} ({csv_path})")
-        return replay_motion_csv(self.robot, csv_path)
+        print(
+            f"[RobotActions] replay recorded motion: "
+            f"{name} ({csv_path}) speed={speed}"
+        )
+        return replay_motion_csv(self.robot, csv_path, speed=speed)
 
     def _extract_target_pose(self, obj):
         if not isinstance(obj, dict):
@@ -297,14 +302,6 @@ def dance(robot):
     return RobotActions(robot).dance()
 
 
-def wave_hand(robot):
-    return RobotActions(robot).wave_hand()
-
-
-def shake_hand(robot):
-    return RobotActions(robot).shake_hand()
-
-
 def move_to_object(robot, obj):
     return RobotActions(robot).move_to_object(obj=obj)
 
@@ -335,6 +332,14 @@ def draw_heart(robot):
 
 def hand_over(robot):
     return RobotActions(robot).hand_over()
+
+
+def lie_down(robot):
+    return RobotActions(robot).lie_down()
+
+
+def stand_up(robot):
+    return RobotActions(robot).stand_up()
 
 
 def _run_pose_sequence(robot, poses, duration=0.8, sleep=0.1):
@@ -387,14 +392,6 @@ def DNC(robot):
     return dance(robot)
 
 
-def WAV(robot):
-    return wave_hand(robot)
-
-
-def SKH(robot):
-    return shake_hand(robot)
-
-
 def MOV(robot, obj):
     return move_to_object(robot, obj)
 
@@ -411,8 +408,8 @@ def REL(robot):
     return release(robot)
 
 
-def TRW(robot):
-    return release(robot)
+def TRW(robot, obj=None, rgbd_cam=None):
+    return RobotActions(robot).throw_away(obj=obj, rgbd_cam=rgbd_cam)
 
 
 def LFT(robot):
@@ -427,29 +424,35 @@ def HRT(robot):
     return draw_heart(robot)
 
 
-def HND(robot):
-    return hand_over(robot)
+def HND(robot, obj=None, rgbd_cam=None):
+    return RobotActions(robot).hand_over(obj=obj, rgbd_cam=rgbd_cam)
+
+
+def PRN(robot):
+    return lie_down(robot)
+
+
+def STD(robot):
+    return stand_up(robot)
 
 
 ACTION_DESCRIPTIONS = {
     "DNC": "dance",
-    "WAV": "wave hand",
-    "SKH": "wave hand",
     "MOV": "move to object",
     "MVA": "move above object",
     "GRB": "grab object",
     "REL": "release",
-    "TRW": "release",
+    "TRW": "throw away",
     "LFT": "lift",
     "THR": "throw",
     "HRT": "draw heart",
     "HND": "hand over to camera or person",
+    "PRN": "lie down",
+    "STD": "stand up straight",
 }
 
 ACTION_FUNCTIONS = {
     "DNC": DNC,
-    "WAV": WAV,
-    "SKH": SKH,
     "MOV": MOV,
     "MVA": MVA,
     "GRB": GRB,
@@ -459,6 +462,8 @@ ACTION_FUNCTIONS = {
     "THR": THR,
     "HRT": HRT,
     "HND": HND,
+    "PRN": PRN,
+    "STD": STD,
 }
 
 

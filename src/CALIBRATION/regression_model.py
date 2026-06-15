@@ -5,7 +5,7 @@ import numpy as np
 
 
 class RegressionModel:
-    def __init__(self, samples, k=4, power=2.0):
+    def __init__(self, samples, k=1, power=2.0):
         if len(samples) == 0:
             raise ValueError("calibration samples are empty")
 
@@ -21,7 +21,7 @@ class RegressionModel:
         self.x_std[self.x_std < 1e-6] = 1.0
 
     @classmethod
-    def from_latest_or_path(cls, csv_path=None, search_dir="src/CALIBRATION/robot_camera_calibration_samples", k=4):
+    def from_latest_or_path(cls, csv_path=None, search_dir="src/CALIBRATION/robot_camera_calibration_samples", k=1):
         path = cls._resolve_csv_path(csv_path, search_dir)
 
         if path is None:
@@ -30,7 +30,7 @@ class RegressionModel:
         return cls.from_csv(path, k=k)
 
     @classmethod
-    def from_csv(cls, csv_path, k=4):
+    def from_csv(cls, csv_path, k=1):
         path = Path(csv_path)
         samples = []
 

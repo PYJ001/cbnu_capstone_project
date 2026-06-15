@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "capstone-code-analysis"
+version = "0.1.0"
+description = "Presentation-oriented Python project analysis CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+ollama = ["requests>=2.31"]
+
+[project.scripts]
+code-analysis = "code_analysis.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["code_analysis*"]

@@ -28,7 +28,7 @@ class CalibrationModel:
         self,
         csv_path=None,
         search_dir="src/CALIBRATION/robot_camera_calibration_samples",
-        k=4,
+        k=1,
         camera_intrinsics=None,
         auto_load=True,
     ):
@@ -50,6 +50,36 @@ class CalibrationModel:
 
     def run(self, *args, **kwargs):
         return self.calibrate(*args, **kwargs)
+
+    def record_teleoperation_poses(self, robot, **kwargs):
+        try:
+            from .teleoperation_recorder import record_teleoperation_poses
+        except ImportError:
+            project_root = Path(__file__).resolve().parents[2]
+
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+
+            from src.CALIBRATION.teleoperation_recorder import (
+                record_teleoperation_poses,
+            )
+
+        return record_teleoperation_poses(robot=robot, **kwargs)
+
+    def load_teleoperation_poses(self, path):
+        try:
+            from .teleoperation_recorder import load_teleoperation_poses
+        except ImportError:
+            project_root = Path(__file__).resolve().parents[2]
+
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+
+            from src.CALIBRATION.teleoperation_recorder import (
+                load_teleoperation_poses,
+            )
+
+        return load_teleoperation_poses(path)
 
     def run_recalibration(
         self,

@@ -186,15 +186,39 @@ class ProjectController:
             )
             return False
 
+        calibration_poses_path = self._find_latest_calibration_poses_path()
+
+        if calibration_poses_path is not None:
+            print(
+                "[ProjectController] using calibration poses: "
+                f"{calibration_poses_path}"
+            )
+            self._publish_interface_state(
+                print_out=(
+                    "Recalibration started with recorded calibration action: "
+                    f"{calibration_poses_path.name}"
+                ),
+            )
+        else:
+            print(
+                "[ProjectController] no recorded calibration poses found; "
+                "using default grid"
+            )
+
         try:
             calibration_data = self.calibration_model.run_recalibration(
                 robot=self.robot,
                 rgbd_cam=self.rgbd_cam,
                 capture_callback=self._capture_calibration_robot_detection,
+                calibration_poses_path=(
+                    str(calibration_poses_path)
+                    if calibration_poses_path is not None
+                    else None
+                ),
                 cycles=1,
-                move_duration=8.0,
-                settle_time=1.0,
-                sample_hz=5.0,
+                move_duration=2.0,
+                settle_time=0.5,
+                sample_hz=8.0,
                 max_samples_per_pose=None,
                 max_attempts_per_pose=None,
                 min_uv_distance=0.0,
@@ -249,6 +273,19 @@ class ProjectController:
             action_result="success",
         )
         return True
+
+    def _find_latest_calibration_poses_path(self):
+        root = Path("src/CALIBRATION/teleoperation_poses")
+
+        if not root.exists():
+            return None
+
+        paths = sorted(root.glob("teleoperation_poses_*.json"))
+
+        if len(paths) == 0:
+            return None
+
+        return paths[-1]
 
     def _handle_perception_command(self, user_command):
         current_user_command = self._get_current_user_command()

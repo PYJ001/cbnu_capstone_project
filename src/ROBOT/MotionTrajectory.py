@@ -1,4 +1,5 @@
 import csv
+import time
 from pathlib import Path
 
 
@@ -58,6 +59,8 @@ def replay_motion_csv(
     min_duration=0.05,
     dry_run=False,
     verbose=False,
+    clamp_gripper=True,
+    skip_invalid=False,
 ):
     if speed <= 0:
         raise ValueError("speed must be positive")
@@ -67,11 +70,16 @@ def replay_motion_csv(
     if len(rows) == 0:
         return "failed"
 
-    previous_elapsed = rows[0]["elapsed"]
+    previous_elapsed = None
 
     for row in rows:
         elapsed = row["elapsed"]
-        duration = max(min_duration, (elapsed - previous_elapsed) / speed)
+        duration = resolve_replay_duration(
+            elapsed=elapsed,
+            previous_elapsed=previous_elapsed,
+            speed=speed,
+            min_duration=min_duration,
+        )
         pose = [
             row["j1"],
             row["j2"],
@@ -79,6 +87,19 @@ def replay_motion_csv(
             row["j4"],
             row["gripper"],
         ]
+
+        pose = sanitize_replay_pose(
+            robot=robot,
+            pose=pose,
+            row_index=row["index"],
+            clamp_gripper=clamp_gripper,
+            skip_invalid=skip_invalid,
+            verbose=verbose,
+        )
+
+        if pose is None:
+            previous_elapsed = elapsed
+            continue
 
         if verbose:
             print(
@@ -95,9 +116,50 @@ def replay_motion_csv(
             if not ok:
                 return "failed"
 
+            time.sleep(duration)
+
         previous_elapsed = elapsed
 
     return "success"
+
+
+def resolve_replay_duration(elapsed, previous_elapsed, speed=1.0, min_duration=0.05):
+    if previous_elapsed is None:
+        return max(1.0 / speed, min_duration)
+
+    return max(min_duration, (elapsed - previous_elapsed) / speed)
+
+
+def sanitize_replay_pose(
+    robot,
+    pose,
+    row_index=None,
+    clamp_gripper=True,
+    skip_invalid=True,
+    verbose=False,
+):
+    pose = [float(value) for value in pose]
+
+    if clamp_gripper and hasattr(robot, "joint_limits"):
+        low, high = robot.joint_limits.get("gripper", (None, None))
+
+        if low is not None and high is not None:
+            original = pose[4]
+            pose[4] = min(max(pose[4], low), high)
+
+            if verbose and pose[4] != original:
+                print(
+                    "[motion] "
+                    f"row={row_index} clamp gripper "
+                    f"{original:.4f}->{pose[4]:.4f}"
+                )
+
+    if hasattr(robot, "_validate_pose") and not robot._validate_pose(pose):
+        if skip_invalid:
+            print(f"[motion] skip invalid pose row={row_index}: {pose}")
+            return None
+
+    return pose
 
 
 def sanitize_motion_name(name):

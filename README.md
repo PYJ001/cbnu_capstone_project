@@ -10,6 +10,40 @@ python3 main.py
 
 `main.py` only starts `RobotApp`. Most logic lives inside `src/`.
 
+## Code Analysis Package
+
+The `code_analysis` package generates presentation-ready project summaries.
+
+Run without installation:
+
+```bash
+python3 -m code_analysis
+```
+
+Generated files are written to `code_analysis_output/` by default:
+
+```text
+architecture_summary.md
+presentation_material.md
+project_analysis.md
+project_analysis.json
+project_report.md
+project_tree.txt
+```
+
+Optional Ollama report generation:
+
+```bash
+python3 -m code_analysis --ollama
+```
+
+Editable install for CLI usage:
+
+```bash
+pip install -e .
+code-analysis --root . --output-dir code_analysis_output
+```
+
 ## Required Project Tree
 
 ```text

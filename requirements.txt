@@ -9,3 +9,4 @@ sounddevice>=0.5
 soundfile>=0.13
 openai-whisper>=20250625
 pyrealsense2
+tqdm>=4.66

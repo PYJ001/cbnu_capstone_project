@@ -11,6 +11,20 @@ import numpy as np
 
 from src.RGBD_CAM import RGBD
 from src.ROBOT    import ROBOT
+from src.CALIBRATION.teleoperation_recorder import load_teleoperation_poses
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
+
+
+def calib_log(message):
+    if tqdm is not None:
+        tqdm.write(str(message))
+        return
+
+    print(message)
 
 
 def main():
@@ -26,6 +40,7 @@ def main():
             output_dir          = args.output_dir,
             cycles              = args.cycles,
             move_duration       = args.move_duration,
+            move_duration_scale = args.move_duration_scale,
             settle_time         = args.settle_time,
             warmup_frames       = args.warmup_frames,
             sample_hz           = args.sample_hz,
@@ -37,11 +52,12 @@ def main():
             require_valid_depth = not args.allow_empty_depth,
             save_rejected_every = args.save_rejected_every,
             return_home         = args.return_home,
+            calibration_poses_path=args.calibration_poses_path,
         )
     finally:
         rgbd_cam.close()
 
-    print(f"[CALIB] dataset saved: {csv_path}")
+    calib_log(f"[CALIB] dataset saved: {csv_path}")
 
 
 def collect_calibration_samples(
@@ -62,8 +78,12 @@ def collect_calibration_samples(
     save_rejected_every   = 20,
     return_home           = False,
     capture_callback      = None,
+    calibration_poses     = None,
+    calibration_poses_path= None,
+    move_duration_scale   = 1.0,
 ):
     sample_hz             = max(0.1, float(sample_hz))
+    move_duration_scale   = max(0.05, float(move_duration_scale))
     save_rejected_every   = max(0, int(save_rejected_every))
     if max_samples_per_pose is not None:
         max_samples_per_pose = max(1, int(max_samples_per_pose))
@@ -108,188 +128,244 @@ def collect_calibration_samples(
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
-        poses = robot.get_calibration_poses()
+        poses = resolve_calibration_poses(
+            robot=robot,
+            calibration_poses=calibration_poses,
+            calibration_poses_path=calibration_poses_path,
+        )
 
-        for cycle_idx in range(1, cycles + 1):
-            for pose_idx, pose in enumerate(poses, start=1):
-                pose_name = pose["name"]
+        progress = make_calibration_progress(cycles=cycles, pose_count=len(poses))
 
-                print(f"[CALIB] cycle={cycle_idx} pose={pose_idx} {pose_name}")
+        try:
+            for cycle_idx in range(1, cycles + 1):
+                for pose_idx, pose in enumerate(poses, start=1):
+                    pose_name = pose["name"]
 
-                if not is_reachable_pose(robot, pose):
-                    skipped_pose_count += 1
-                    print(f"[CALIB] skip unreachable/invalid pose: {pose_name}")
-                    continue
-
-                move_result = {"ok": None}
-                move_thread = threading.Thread(
-                    target=_move_to_calibration_pose_worker,
-                    args=(robot, pose, move_duration, move_result),
-                    daemon=True,
-                )
-                move_thread.start()
-
-                accepted_for_pose = 0
-                attempts_for_pose = 0
-                pose_start_time = time.time()
-                move_deadline = pose_start_time + move_duration
-                capture_start = (
-                    pose_start_time
-                    if sample_while_moving
-                    else move_deadline + settle_time
-                )
-                capture_until = move_deadline + settle_time + (
-                    (max_attempts_per_pose * period)
-                    if max_attempts_per_pose is not None
-                    else 0.0
-                )
-                next_sample_time = pose_start_time
-
-                while move_thread.is_alive() or time.time() < capture_until:
-                    if move_result["ok"] is False and not move_thread.is_alive():
-                        print(
-                            "[CALIB] stopping samples for failed move: "
-                            f"{pose_name}"
-                        )
-                        break
-
-                    now = time.time()
-
-                    if now < capture_start:
-                        time.sleep(min(0.02, capture_start - now))
-                        continue
-
-                    if not sample_while_moving and move_thread.is_alive():
-                        time.sleep(0.02)
-                        continue
-
-                    if (
-                        max_samples_per_pose is not None
-                        and accepted_for_pose >= max_samples_per_pose
-                    ):
-                        break
-
-                    if now < next_sample_time:
-                        time.sleep(min(0.01, next_sample_time - now))
-                        continue
-
-                    next_sample_time += period
-                    attempt_idx += 1
-                    attempts_for_pose += 1
-
-                    if (
-                        max_attempts_per_pose is not None
-                        and attempts_for_pose > max_attempts_per_pose
-                    ):
-                        break
-
-                    if capture_callback is None:
-                        frame, depth, yolo_robot = capture_robot_detection(
-                            rgbd_cam=rgbd_cam,
-                            warmup_frames=warmup_frames,
-                        )
-                    else:
-                        frame, depth, yolo_robot = capture_callback()
-
-                    valid, validation_error = validate_robot_detection(
-                        yolo_robot=yolo_robot,
-                        min_robot_conf=min_robot_conf,
-                        require_valid_depth=require_valid_depth,
+                    progress_set_description(
+                        progress,
+                        f"cycle={cycle_idx}/{cycles} pose={pose_idx}/{len(poses)}",
+                    )
+                    progress_set_postfix(
+                        progress,
+                        accepted=accepted_count,
+                        rejected=rejected_count,
+                        duplicates=duplicate_count,
+                        skipped=skipped_pose_count,
                     )
 
-                    if not valid:
-                        rejected_count += 1
+                    calib_log(f"[CALIB] cycle={cycle_idx} pose={pose_idx} {pose_name}")
+
+                    if not is_reachable_pose(robot, pose):
+                        skipped_pose_count += 1
+                        calib_log(f"[CALIB] skip unreachable/invalid pose: {pose_name}")
+                        progress_update(progress)
+                        continue
+
+                    move_result = {"ok": None}
+                    pose_move_duration = (
+                        float(pose.get("duration", move_duration))
+                        * move_duration_scale
+                    )
+                    move_thread = threading.Thread(
+                        target=_move_to_calibration_pose_worker,
+                        args=(robot, pose, pose_move_duration, move_result),
+                        daemon=True,
+                    )
+                    move_thread.start()
+
+                    accepted_for_pose = 0
+                    attempts_for_pose = 0
+                    pose_start_time = time.time()
+                    move_deadline = pose_start_time + pose_move_duration
+                    capture_start = (
+                        pose_start_time
+                        if sample_while_moving
+                        else move_deadline + settle_time
+                    )
+                    capture_until = move_deadline + settle_time + (
+                        (max_attempts_per_pose * period)
+                        if max_attempts_per_pose is not None
+                        else 0.0
+                    )
+                    next_sample_time = pose_start_time
+
+                    while move_thread.is_alive() or time.time() < capture_until:
+                        if move_result["ok"] is False and not move_thread.is_alive():
+                            calib_log(
+                                "[CALIB] stopping samples for failed move: "
+                                f"{pose_name}"
+                            )
+                            break
+
+                        now = time.time()
+
+                        if now < capture_start:
+                            time.sleep(min(0.02, capture_start - now))
+                            continue
+
+                        if not sample_while_moving and move_thread.is_alive():
+                            time.sleep(0.02)
+                            continue
 
                         if (
-                            save_rejected_every > 0
-                            and rejected_count % save_rejected_every == 0
+                            max_samples_per_pose is not None
+                            and accepted_for_pose >= max_samples_per_pose
                         ):
-                            save_rejected_image(
-                                out_dir     = rejected_dir,
-                                attempt_idx = attempt_idx,
-                                cycle_idx   = cycle_idx,
-                                pose_idx    = pose_idx,
-                                pose_name   = pose_name,
-                                frame       = frame,
-                                yolo_robot  = yolo_robot,
-                                reason      = validation_error,
+                            break
+
+                        if now < next_sample_time:
+                            time.sleep(min(0.01, next_sample_time - now))
+                            continue
+
+                        next_sample_time += period
+                        attempt_idx += 1
+                        attempts_for_pose += 1
+
+                        if (
+                            max_attempts_per_pose is not None
+                            and attempts_for_pose > max_attempts_per_pose
+                        ):
+                            break
+
+                        if capture_callback is None:
+                            frame, depth, yolo_robot = capture_robot_detection(
+                                rgbd_cam=rgbd_cam,
+                                warmup_frames=warmup_frames,
+                            )
+                        else:
+                            frame, depth, yolo_robot = capture_callback()
+
+                        valid, validation_error = validate_robot_detection(
+                            yolo_robot=yolo_robot,
+                            min_robot_conf=min_robot_conf,
+                            require_valid_depth=require_valid_depth,
+                        )
+
+                        if not valid:
+                            rejected_count += 1
+                            progress_set_postfix(
+                                progress,
+                                accepted=accepted_count,
+                                rejected=rejected_count,
+                                duplicates=duplicate_count,
+                                skipped=skipped_pose_count,
                             )
 
-                        print(
-                            "[CALIB] rejected "
-                            f"pose={pose_name} frame={attempt_idx}: "
-                            f"{validation_error}"
+                            if (
+                                save_rejected_every > 0
+                                and rejected_count % save_rejected_every == 0
+                            ):
+                                save_rejected_image(
+                                    out_dir     = rejected_dir,
+                                    attempt_idx = attempt_idx,
+                                    cycle_idx   = cycle_idx,
+                                    pose_idx    = pose_idx,
+                                    pose_name   = pose_name,
+                                    frame       = frame,
+                                    yolo_robot  = yolo_robot,
+                                    reason      = validation_error,
+                                )
+
+                            calib_log(
+                                "[CALIB] rejected "
+                                f"pose={pose_name} frame={attempt_idx}: "
+                                f"{validation_error}"
+                            )
+                            continue
+
+                        if is_duplicate_uvd(
+                            yolo_robot=yolo_robot,
+                            accepted_uvds=accepted_uvds,
+                            min_uv_distance=min_uv_distance,
+                        ):
+                            duplicate_count += 1
+                            progress_set_postfix(
+                                progress,
+                                accepted=accepted_count,
+                                rejected=rejected_count,
+                                duplicates=duplicate_count,
+                                skipped=skipped_pose_count,
+                            )
+                            calib_log(
+                                "[CALIB] duplicate "
+                                f"pose={pose_name} frame={attempt_idx}: "
+                                f"u={yolo_robot.get('u')} v={yolo_robot.get('v')}"
+                            )
+                            continue
+
+                        actual_joints = robot.get_pose()
+                        sample_idx += 1
+                        accepted_for_pose += 1
+                        accepted_count += 1
+                        progress_set_postfix(
+                            progress,
+                            accepted=accepted_count,
+                            rejected=rejected_count,
+                            duplicates=duplicate_count,
+                            skipped=skipped_pose_count,
                         )
-                        continue
 
-                    if is_duplicate_uvd(
-                        yolo_robot=yolo_robot,
-                        accepted_uvds=accepted_uvds,
-                        min_uv_distance=min_uv_distance,
-                    ):
-                        duplicate_count += 1
-                        print(
-                            "[CALIB] duplicate "
-                            f"pose={pose_name} frame={attempt_idx}: "
-                            f"u={yolo_robot.get('u')} v={yolo_robot.get('v')}"
+                        image_path = save_sample_image(
+                            out_dir    = out_dir,
+                            sample_idx = sample_idx,
+                            cycle_idx  = cycle_idx,
+                            pose_idx   = pose_idx,
+                            pose_name  = pose_name,
+                            frame      = frame,
+                            yolo_robot = yolo_robot,
                         )
-                        continue
 
-                    actual_joints = robot.get_pose()
-                    sample_idx += 1
-                    accepted_for_pose += 1
-                    accepted_count += 1
-
-                    image_path = save_sample_image(
-                        out_dir    = out_dir,
-                        sample_idx = sample_idx,
-                        cycle_idx  = cycle_idx,
-                        pose_idx   = pose_idx,
-                        pose_name  = pose_name,
-                        frame      = frame,
-                        yolo_robot = yolo_robot,
-                    )
-
-                    row = make_csv_row(
-                        sample_idx = sample_idx,
-                        cycle_idx  = cycle_idx,
-                        pose_idx   = pose_idx,
-                        pose_name  = pose_name,
-                        joints     = actual_joints,
-                        yolo_robot = yolo_robot,
-                        image_path = image_path,
-                    )
-                    writer.writerow(row)
-                    csv_file.flush()
-                    accepted_uvds.append(
-                        (
-                            float(row["robot_u"]),
-                            float(row["robot_v"]),
-                            parse_float(row["robot_d"]),
+                        row = make_csv_row(
+                            sample_idx = sample_idx,
+                            cycle_idx  = cycle_idx,
+                            pose_idx   = pose_idx,
+                            pose_name  = pose_name,
+                            joints     = actual_joints,
+                            yolo_robot = yolo_robot,
+                            image_path = image_path,
                         )
+                        writer.writerow(row)
+                        csv_file.flush()
+                        accepted_uvds.append(
+                            (
+                                float(row["robot_u"]),
+                                float(row["robot_v"]),
+                                parse_float(row["robot_d"]),
+                            )
+                        )
+
+                        elapsed = time.time() - pose_start_time
+                        calib_log(
+                            "[CALIB] saved "
+                            f"t={elapsed:.2f}s "
+                            f"u={row['robot_u']} v={row['robot_v']} d={row['robot_d']} "
+                            f"conf={row['robot_conf']} "
+                            f"actual_joints={actual_joints}"
+                        )
+
+                    move_thread.join(timeout=0.1)
+
+                    if move_result["ok"] is False:
+                        calib_log(f"[CALIB] move failed: {pose_name}")
+
+                    if accepted_for_pose == 0:
+                        calib_log(f"[CALIB] no valid sample for pose: {pose_name}")
+
+                    progress_update(progress)
+                    progress_set_postfix(
+                        progress,
+                        accepted=accepted_count,
+                        rejected=rejected_count,
+                        duplicates=duplicate_count,
+                        skipped=skipped_pose_count,
                     )
-
-                    elapsed = time.time() - pose_start_time
-                    print(
-                        "[CALIB] saved "
-                        f"t={elapsed:.2f}s "
-                        f"u={row['robot_u']} v={row['robot_v']} d={row['robot_d']} "
-                        f"conf={row['robot_conf']} "
-                        f"actual_joints={actual_joints}"
-                    )
-
-                move_thread.join(timeout=0.1)
-
-                if move_result["ok"] is False:
-                    print(f"[CALIB] move failed: {pose_name}")
-
-                if accepted_for_pose == 0:
-                    print(f"[CALIB] no valid sample for pose: {pose_name}")
+        finally:
+            progress_close(progress)
 
         if return_home:
-            robot.move_to_base_pose(duration=move_duration)
+            robot.move_to_base_pose(duration=move_duration * move_duration_scale)
 
-    print(
+    calib_log(
         "[CALIB] summary "
         f"accepted={accepted_count} rejected={rejected_count} "
         f"duplicates={duplicate_count} skipped_poses={skipped_pose_count} "
@@ -305,11 +381,79 @@ def collect_calibration_samples(
     return csv_path
 
 
+def make_calibration_progress(cycles, pose_count):
+    total = max(0, int(cycles) * int(pose_count))
+
+    if tqdm is None:
+        calib_log(f"[CALIB] progress: 0/{total} poses")
+        return {
+            "total": total,
+            "current": 0,
+            "description": "calibration",
+        }
+
+    return tqdm(
+        total=total,
+        desc="calibration",
+        unit="pose",
+        dynamic_ncols=True,
+    )
+
+
+def progress_set_description(progress, description):
+    if progress is None:
+        return
+
+    if hasattr(progress, "set_description"):
+        progress.set_description(description)
+        return
+
+    progress["description"] = description
+
+
+def progress_set_postfix(progress, **kwargs):
+    if progress is None:
+        return
+
+    if hasattr(progress, "set_postfix"):
+        progress.set_postfix(kwargs)
+
+
+def progress_update(progress, amount=1):
+    if progress is None:
+        return
+
+    if hasattr(progress, "update"):
+        progress.update(amount)
+        return
+
+    progress["current"] += amount
+    calib_log(
+        "[CALIB] progress: "
+        f"{progress['current']}/{progress['total']} poses "
+        f"({progress.get('description', 'calibration')})"
+    )
+
+
+def progress_close(progress):
+    if progress is None:
+        return
+
+    if hasattr(progress, "close"):
+        progress.close()
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="src/CALIBRATION/robot_camera_calibration_samples")
     parser.add_argument("--cycles", type=int, default=1)
     parser.add_argument("--move-duration", type=float, default=1.5)
+    parser.add_argument(
+        "--move-duration-scale",
+        type=float,
+        default=1.0,
+        help="Scale all calibration move durations. Values below 1.0 move faster.",
+    )
     parser.add_argument("--settle-time", type=float, default=1.0)
     parser.add_argument("--warmup-frames", type=int, default=3)
     parser.add_argument("--sample-hz", type=float, default=10.0)
@@ -321,7 +465,55 @@ def parse_args():
     parser.add_argument("--save-rejected-every", type=int, default=20)
     parser.add_argument("--allow-empty-depth", action="store_true")
     parser.add_argument("--return-home", action="store_true")
+    parser.add_argument(
+        "--calibration-poses-path",
+        default=None,
+        help="Use teleoperation-recorded calibration poses from this JSON file.",
+    )
     return parser.parse_args()
+
+
+def resolve_calibration_poses(
+    robot,
+    calibration_poses=None,
+    calibration_poses_path=None,
+):
+    if calibration_poses is not None:
+        poses = list(calibration_poses)
+    elif calibration_poses_path is not None:
+        poses = load_teleoperation_poses(calibration_poses_path)
+    else:
+        poses = robot.get_calibration_poses()
+
+    normalized = []
+
+    for index, pose in enumerate(poses, start=1):
+        if isinstance(pose, dict):
+            joints = pose.get("joints")
+            name = pose.get("name", f"calib_{index:04d}")
+            duration = pose.get("duration")
+        else:
+            joints = pose
+            name = f"calib_{index:04d}"
+            duration = None
+
+        if joints is None or len(joints) != 5:
+            raise ValueError(f"invalid calibration pose at index {index}: {pose}")
+
+        item = {
+            "name": str(name),
+            "joints": tuple(float(value) for value in joints),
+        }
+
+        if duration is not None:
+            item["duration"] = float(duration)
+
+        normalized.append(item)
+
+    if len(normalized) == 0:
+        raise ValueError("calibration pose sequence is empty")
+
+    return normalized
 
 
 def capture_robot_detection(rgbd_cam, warmup_frames):
@@ -574,9 +766,9 @@ def write_calibration_report(csv_path, out_dir, accepted_count, rejected_count):
     )
     save_uv_coverage_image(rows, coverage_path)
 
-    print(f"[CALIB] report json : {report_json_path}")
-    print(f"[CALIB] report text : {report_txt_path}")
-    print(f"[CALIB] uv coverage  : {coverage_path}")
+    calib_log(f"[CALIB] report json : {report_json_path}")
+    calib_log(f"[CALIB] report text : {report_txt_path}")
+    calib_log(f"[CALIB] uv coverage  : {coverage_path}")
 
 
 def load_calibration_rows(csv_path):

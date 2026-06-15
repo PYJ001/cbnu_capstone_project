@@ -1,0 +1,1068 @@
+[
+  {
+    "path": "code_analysis/__init__.py",
+    "line_count": 8,
+    "imports": [
+      "analyzer.analyze_project",
+      "models.ClassInfo",
+      "models.FileInfo"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "Presentation-oriented Python project analysis tools.",
+    "error": ""
+  },
+  {
+    "path": "code_analysis/__main__.py",
+    "line_count": 5,
+    "imports": [
+      "cli.main"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "code_analysis/analyzer.py",
+    "line_count": 158,
+    "imports": [
+      "ast",
+      "models.ClassInfo",
+      "models.FileInfo",
+      "pathlib.Path",
+      "subprocess"
+    ],
+    "classes": [],
+    "functions": [
+      "should_skip",
+      "get_tree",
+      "make_fallback_tree",
+      "normalize_docstring",
+      "analyze_python_file",
+      "analyze_project"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "code_analysis/cli.py",
+    "line_count": 124,
+    "imports": [
+      "analyzer.DEFAULT_IGNORE_DIRS",
+      "analyzer.analyze_project",
+      "analyzer.get_tree",
+      "argparse",
+      "ollama.ask_ollama",
+      "pathlib.Path",
+      "renderers.make_architecture_summary",
+      "renderers.make_json_summary",
+      "renderers.make_markdown_analysis",
+      "renderers.make_presentation_material",
+      "renderers.make_report_prompt"
+    ],
+    "classes": [],
+    "functions": [
+      "parse_args",
+      "write_outputs",
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "code_analysis/models.py",
+    "line_count": 20,
+    "imports": [
+      "dataclasses.dataclass",
+      "dataclasses.field",
+      "pathlib.Path"
+    ],
+    "classes": [
+      {
+        "name": "ClassInfo",
+        "methods": [],
+        "docstring": ""
+      },
+      {
+        "name": "FileInfo",
+        "methods": [],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "code_analysis/ollama.py",
+    "line_count": 20,
+    "imports": [],
+    "classes": [],
+    "functions": [
+      "ask_ollama"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "code_analysis/renderers.py",
+    "line_count": 303,
+    "imports": [
+      "collections.defaultdict",
+      "json"
+    ],
+    "classes": [],
+    "functions": [
+      "group_by_package",
+      "summarize_role",
+      "make_markdown_analysis",
+      "make_architecture_summary",
+      "make_presentation_material",
+      "make_json_summary",
+      "make_report_prompt"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "main.py",
+    "line_count": 10,
+    "imports": [
+      "src.RobotApp.RobotApp"
+    ],
+    "classes": [],
+    "functions": [
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/CALIBRATION/__init__.py",
+    "line_count": 22,
+    "imports": [
+      "calibration_main.CalibrationModel",
+      "calibration_main.CalibrationModelService",
+      "calibration_main.create_calibration_model",
+      "calibration_poses.DEFAULT_CALIBRATION_POSES",
+      "regression_model.RegressionModel"
+    ],
+    "classes": [],
+    "functions": [
+      "collect_calibration_samples"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/CALIBRATION/calibration_main.py",
+    "line_count": 348,
+    "imports": [
+      "copy",
+      "importlib.util",
+      "pathlib.Path",
+      "sys"
+    ],
+    "classes": [
+      {
+        "name": "CalibrationModel",
+        "methods": [
+          "__init__",
+          "launch",
+          "close",
+          "run",
+          "run_recalibration",
+          "calibrate",
+          "reload",
+          "uvd2qrst",
+          "uvd2xyz",
+          "uvd2qrst_objs",
+          "test",
+          "_format_qrst",
+          "_qrst_to_joint_tuple",
+          "_collect_calibration_samples",
+          "_safe_call"
+        ],
+        "docstring": "RobotApp-facing calibration package entry point. CalibrationModel does not own camera or robot objects. ProjectController passes robot/camera callbacks when recalibration needs physical movement."
+      }
+    ],
+    "functions": [
+      "create_calibration_model",
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/CALIBRATION/calibration_poses.py",
+    "line_count": 28,
+    "imports": [],
+    "classes": [],
+    "functions": [
+      "make_grid_calibration_poses"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/CALIBRATION/collect_calibration_samples.py",
+    "line_count": 774,
+    "imports": [
+      "argparse",
+      "csv",
+      "cv2",
+      "datetime.datetime",
+      "json",
+      "numpy",
+      "pathlib.Path",
+      "src.RGBD_CAM.RGBD",
+      "src.ROBOT.ROBOT",
+      "threading",
+      "time"
+    ],
+    "classes": [],
+    "functions": [
+      "main",
+      "collect_calibration_samples",
+      "parse_args",
+      "capture_robot_detection",
+      "_move_to_calibration_pose_worker",
+      "is_reachable_pose",
+      "is_duplicate_uvd",
+      "validate_robot_detection",
+      "save_rejected_image",
+      "save_sample_image",
+      "make_csv_row",
+      "draw_robot_detection",
+      "write_calibration_report",
+      "load_calibration_rows",
+      "make_calibration_report",
+      "format_calibration_report",
+      "save_uv_coverage_image",
+      "depth_to_color",
+      "summarize_values",
+      "format_summary",
+      "parse_float",
+      "safe_ratio"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/CALIBRATION/regression_model.py",
+    "line_count": 160,
+    "imports": [
+      "csv",
+      "numpy",
+      "pathlib.Path"
+    ],
+    "classes": [
+      {
+        "name": "RegressionModel",
+        "methods": [
+          "__init__",
+          "from_latest_or_path",
+          "from_csv",
+          "predict",
+          "_float_or_mean",
+          "_resolve_csv_path",
+          "_csv_has_samples",
+          "_parse_row",
+          "_parse_float"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/INTERFACE/VoiceManager.py",
+    "line_count": 333,
+    "imports": [
+      "asyncio",
+      "edge_tts",
+      "os",
+      "pathlib.Path",
+      "shutil",
+      "subprocess",
+      "tempfile"
+    ],
+    "classes": [
+      {
+        "name": "VoiceManager",
+        "methods": [
+          "__init__",
+          "speak",
+          "_speak_async",
+          "listen",
+          "_listen",
+          "_convert_mp3_to_wav",
+          "_make_play_command",
+          "_clean_text",
+          "_has_command",
+          "_report_audio_devices_once",
+          "_select_input_device",
+          "_select_auto_input_device",
+          "_get_device_sample_rate"
+        ],
+        "docstring": "Unified voice I/O manager for TTS and STT."
+      },
+      {
+        "name": "TTS",
+        "methods": [
+          "__init__",
+          "speak"
+        ],
+        "docstring": "Backward-compatible wrapper for VoiceManager TTS functionality."
+      },
+      {
+        "name": "WhisperSTT",
+        "methods": [
+          "__init__",
+          "listen"
+        ],
+        "docstring": "Backward-compatible wrapper for VoiceManager STT functionality."
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/INTERFACE/__init__.py",
+    "line_count": 8,
+    "imports": [
+      "interface_main.Interface"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/INTERFACE/interface_main.py",
+    "line_count": 630,
+    "imports": [
+      "pathlib.Path",
+      "queue",
+      "sys",
+      "threading",
+      "time"
+    ],
+    "classes": [
+      {
+        "name": "Interface",
+        "methods": [
+          "__init__",
+          "_set_title",
+          "launch",
+          "run",
+          "close",
+          "_send",
+          "_send_handler",
+          "_voice",
+          "_voice_handler",
+          "_make_voice_manager",
+          "_load_command_handler",
+          "_recalibrate",
+          "_recalibrate_handler",
+          "_quit",
+          "_quit_handler",
+          "_perception",
+          "_perception_handler",
+          "_set_printOut",
+          "_set_VLM_summary",
+          "_set_action_seq",
+          "_set_user_command",
+          "get_current_user_command",
+          "_make_user_command",
+          "update",
+          "_start_tts",
+          "_stop_tts",
+          "_speak_result_text",
+          "_should_speak_result_text",
+          "_tts_loop",
+          "_set_rgbd",
+          "_set_cam_rgb",
+          "_set_cam_d",
+          "_set_yolo_robot_result",
+          "_set_yolo_world_result",
+          "_set_inference_rgbd",
+          "_is_inference_rgbd_data",
+          "start_camera_stream",
+          "stop_camera_stream",
+          "_camera_stream_loop",
+          "get_latest_camera_data",
+          "get_user_command",
+          "_handle_pyqt_command"
+        ],
+        "docstring": "RobotApp-facing interface package entry point. This class defines the interface shape first. The methods are intentionally lightweight so they can be mapped to PyQt widgets and signals later."
+      }
+    ],
+    "functions": [
+      "main",
+      "_make_test_rgbd_data"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/INTERFACE/interface_pyqt5.py",
+    "line_count": 502,
+    "imports": [
+      "importlib.util.find_spec",
+      "multiprocessing",
+      "queue"
+    ],
+    "classes": [
+      {
+        "name": "InterfacePyQt5Process",
+        "methods": [
+          "__init__",
+          "launch",
+          "close",
+          "call",
+          "_close_queue",
+          "get_user_command",
+          "_report_process_exit_once"
+        ],
+        "docstring": "PyQt5 UI process client. Importing this module does not import PyQt5. PyQt5 is imported only inside the child process started by launch()."
+      }
+    ],
+    "functions": [
+      "_pyqt5_process_main",
+      "_load_pyqt5"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/INTERFACE/interface_utils.py",
+    "line_count": 418,
+    "imports": [
+      "cv2",
+      "numpy"
+    ],
+    "classes": [
+      {
+        "name": "Canvas",
+        "methods": [
+          "__init__",
+          "rgb",
+          "inference",
+          "placeholder",
+          "_draw_caption"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [
+      "_cv2_text_width",
+      "_split_long_word_for_cv2",
+      "_wrap_text_for_cv2",
+      "draw_text_panel",
+      "_iter_detection_objects",
+      "draw_yolo_world_boxes",
+      "draw_robot_markers",
+      "draw_detections",
+      "_make_bbox",
+      "_draw_object_marker",
+      "make_depth_view"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/LLM_PLANNER/__init__.py",
+    "line_count": 4,
+    "imports": [
+      "llm.LLM",
+      "llm_planner_main.LLMPlanner"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/LLM_PLANNER/llm.py",
+    "line_count": 70,
+    "imports": [
+      "json",
+      "re"
+    ],
+    "classes": [
+      {
+        "name": "LLM",
+        "methods": [
+          "__init__",
+          "inference",
+          "inference_json",
+          "_extract_json"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/LLM_PLANNER/llm_planner_main.py",
+    "line_count": 460,
+    "imports": [
+      "argparse",
+      "json"
+    ],
+    "classes": [
+      {
+        "name": "LLMPlanner",
+        "methods": [
+          "__init__",
+          "launch",
+          "run",
+          "close",
+          "inference",
+          "_make_plan",
+          "_make_print_out",
+          "_make_selected_action_descriptions",
+          "_validate_action_sequence",
+          "_str",
+          "_cut"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/ProjectController.py",
+    "line_count": 752,
+    "imports": [
+      "pathlib.Path",
+      "sys",
+      "threading",
+      "time"
+    ],
+    "classes": [
+      {
+        "name": "ProjectController",
+        "methods": [
+          "__init__",
+          "launch",
+          "join",
+          "stop",
+          "main_loop",
+          "_receive_interface_command",
+          "_route_interface_command",
+          "_handle_quit_command",
+          "_handle_user_task_command",
+          "_handle_recalibration_command",
+          "_handle_perception_command",
+          "_request_latest_rgbd_frame",
+          "_request_perception_data",
+          "_request_fresh_perception_data",
+          "_run_vlm",
+          "_run_yolo_robot",
+          "_run_yolo_world",
+          "_apply_calibration",
+          "_capture_calibration_robot_detection",
+          "_request_llm_plan",
+          "_select_calibration_target",
+          "_is_valid_joint",
+          "_command_robot",
+          "_request_latest_robot_detection",
+          "_publish_rgbd_frame",
+          "_publish_interface_state",
+          "test",
+          "test_rgbd_interface",
+          "_handle_test_interface_command",
+          "_capture_rgbd_frame",
+          "_launch_test_modules",
+          "_close_test_modules",
+          "_make_final_result",
+          "_is_quit_command",
+          "_is_recalibration_command",
+          "_is_perception_command",
+          "_format_perception_result",
+          "_format_task_result",
+          "_format_calibration_move_result",
+          "_format_robot_execution_result",
+          "_get_current_user_command"
+        ],
+        "docstring": ""
+      },
+      {
+        "name": "_NoopRobot",
+        "methods": [
+          "run_sequence"
+        ],
+        "docstring": ""
+      },
+      {
+        "name": "_NoopLLMPlanner",
+        "methods": [
+          "inference"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [
+      "main"
+    ],
+    "docstring": "Project-level orchestrator. ProjectController is the message router between packages: - receives user commands from Interface - requests perception snapshots from RGBD - asks LLMPlanner for action sequences - sends action sequences to ROBOT - delegates recalibration flow to CALIBRATION - publishes state/results back to Interface",
+    "error": ""
+  },
+  {
+    "path": "src/RGBD_CAM/VLM.py",
+    "line_count": 250,
+    "imports": [
+      "PIL.Image",
+      "cv2",
+      "io"
+    ],
+    "classes": [
+      {
+        "name": "VLM",
+        "methods": [
+          "__init__",
+          "inference",
+          "infer_scene_and_objects",
+          "_describe_frame",
+          "_frame_to_jpeg_bytes",
+          "_latest_result",
+          "extract_object_classes",
+          "normalize_object_class",
+          "is_ignored_world_class"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/RGBD_CAM/YoloRobot.py",
+    "line_count": 121,
+    "imports": [
+      "numpy",
+      "pathlib.Path",
+      "ultralytics.YOLO"
+    ],
+    "classes": [
+      {
+        "name": "YoloRobotDetector",
+        "methods": [
+          "__init__",
+          "inference",
+          "_make_object_dict",
+          "_apply_robot_depth_offset",
+          "_get_depth_at"
+        ],
+        "docstring": ""
+      },
+      {
+        "name": "YoloRobot",
+        "methods": [
+          "__init__",
+          "inference",
+          "set_enabled",
+          "is_enabled"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/RGBD_CAM/YoloWorld.py",
+    "line_count": 285,
+    "imports": [
+      "collections.deque",
+      "numpy",
+      "threading",
+      "ultralytics.YOLO"
+    ],
+    "classes": [
+      {
+        "name": "YoloWorldDetector",
+        "methods": [
+          "__init__",
+          "inference",
+          "set_classes",
+          "set_enabled",
+          "is_enabled",
+          "get_classes",
+          "_set_model_classes",
+          "_clean_classes",
+          "_canonical_name",
+          "_expand_class_prompt",
+          "_make_object_dict",
+          "_get_depth_at"
+        ],
+        "docstring": ""
+      },
+      {
+        "name": "YoloWorld",
+        "methods": [
+          "__init__",
+          "inference",
+          "set_classes",
+          "get_classes",
+          "add_classes_from_vlm",
+          "set_enabled",
+          "is_enabled",
+          "_clean_vlm_class",
+          "_is_human_class"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/RGBD_CAM/__init__.py",
+    "line_count": 13,
+    "imports": [
+      "VLM.VLM",
+      "YoloRobot.YoloRobot",
+      "YoloRobot.YoloRobotDetector",
+      "YoloWorld.YoloWorld",
+      "YoloWorld.YoloWorldDetector",
+      "rgbd_cam_main.RGBD"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/RGBD_CAM/rgbd_cam_main.py",
+    "line_count": 490,
+    "imports": [
+      "cv2",
+      "glob",
+      "numpy",
+      "threading",
+      "time"
+    ],
+    "classes": [
+      {
+        "name": "RGBD",
+        "methods": [
+          "__init__",
+          "launch",
+          "run",
+          "close",
+          "_start_camera_stream",
+          "_open_camera",
+          "_close_camera",
+          "get_rgb",
+          "get_depth",
+          "get_rgbd",
+          "get_frame",
+          "get_latest_rgbd_frame",
+          "get_latest_camera_data",
+          "capture_rgbd_frame",
+          "get_camera_data",
+          "camera_loop",
+          "_read_camera_once",
+          "_make_rgbd_frame",
+          "_find_camera",
+          "_make_camera_candidates",
+          "_try_open_camera",
+          "_setup_opencv_capture",
+          "_read_realsense",
+          "_recover_camera_after_error",
+          "_hardware_reset_realsense",
+          "_read_placeholder",
+          "_read_opencv",
+          "test"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/ROBOT/MotionTrajectory.py",
+    "line_count": 117,
+    "imports": [
+      "csv",
+      "pathlib.Path"
+    ],
+    "classes": [],
+    "functions": [
+      "find_latest_motion_csv",
+      "load_motion_csv",
+      "replay_motion_csv",
+      "sanitize_motion_name"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/ROBOT/__init__.py",
+    "line_count": 4,
+    "imports": [
+      "robot_actions.RobotActions",
+      "robot_main.ROBOT"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/ROBOT/robot_actions.py",
+    "line_count": 471,
+    "imports": [
+      "MotionTrajectory.find_latest_motion_csv",
+      "MotionTrajectory.replay_motion_csv",
+      "time"
+    ],
+    "classes": [
+      {
+        "name": "RobotActions",
+        "methods": [
+          "__init__",
+          "run",
+          "get_available_actions",
+          "get_action",
+          "dance",
+          "wave_hand",
+          "shake_hand",
+          "move_to_object",
+          "move_above_object",
+          "grab",
+          "release",
+          "lift",
+          "throw",
+          "draw_heart",
+          "hand_over",
+          "_run_pose_sequence",
+          "_run_recorded_motion",
+          "_extract_target_pose"
+        ],
+        "docstring": "Robot action registry. ROBOT owns low-level movement primitives. RobotActions owns named actions and maps LLM/planner action names such as DNC, GRB, MOV to those primitives."
+      }
+    ],
+    "functions": [
+      "dance",
+      "wave_hand",
+      "shake_hand",
+      "move_to_object",
+      "move_above_object",
+      "grab",
+      "release",
+      "lift",
+      "throw",
+      "draw_heart",
+      "hand_over",
+      "_run_pose_sequence",
+      "_run_recorded_motion",
+      "_extract_target_pose",
+      "DNC",
+      "WAV",
+      "SKH",
+      "MOV",
+      "MVA",
+      "GRB",
+      "REL",
+      "TRW",
+      "LFT",
+      "THR",
+      "HRT",
+      "HND",
+      "get_available_actions",
+      "get_action_function"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/ROBOT/robot_main.py",
+    "line_count": 593,
+    "imports": [
+      "argparse",
+      "json",
+      "pathlib.Path",
+      "re",
+      "subprocess",
+      "sys"
+    ],
+    "classes": [
+      {
+        "name": "ROBOT",
+        "methods": [
+          "__init__",
+          "launch",
+          "run",
+          "close",
+          "get_pose",
+          "get_current_pose",
+          "set_current_pose",
+          "move_angle",
+          "move_to_base_pose",
+          "get_calibration_poses",
+          "move_to_calibration_pose",
+          "action",
+          "run_sequence",
+          "get_available_actions",
+          "_normalize_action",
+          "_get_move_target",
+          "_get_world_objects",
+          "move_to_uvd_offset",
+          "lift_current_pose",
+          "_open_gripper",
+          "_close_gripper",
+          "_move_joint",
+          "_record_move",
+          "_validate_pose",
+          "_make_offset_pose",
+          "_estimate_angle_offset",
+          "_extract_target_pose",
+          "_parse_get_pose_output",
+          "_find_object",
+          "_as_object_list",
+          "_visual_servo_step",
+          "test"
+        ],
+        "docstring": "RobotApp-facing robot package entry point. robot_main owns the runtime robot object now. Legacy RobotManager, RobotService, and RobotActionHandler are no longer part of the active path."
+      }
+    ],
+    "functions": [
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/ROBOT/robot_test.py",
+    "line_count": 177,
+    "imports": [
+      "argparse",
+      "json",
+      "pathlib.Path",
+      "sys"
+    ],
+    "classes": [
+      {
+        "name": "PseudoRGBD",
+        "methods": [
+          "__init__",
+          "get_latest_camera_data"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [
+      "make_pseudo_object",
+      "make_action_payload",
+      "run_robot_action_tests",
+      "main"
+    ],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/RobotApp.py",
+    "line_count": 130,
+    "imports": [
+      "src.CALIBRATION.calibration_main.CalibrationModel",
+      "src.INTERFACE.interface_main.Interface",
+      "src.LLM_PLANNER.llm_planner_main.LLMPlanner",
+      "src.ProjectController.ProjectController",
+      "src.RGBD_CAM.rgbd_cam_main.RGBD",
+      "src.ROBOT.robot_main.ROBOT",
+      "threading"
+    ],
+    "classes": [
+      {
+        "name": "RobotApp",
+        "methods": [
+          "__init__",
+          "test",
+          "run",
+          "close"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/__init__.py",
+    "line_count": 0,
+    "imports": [],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/srv/__init__.py",
+    "line_count": 3,
+    "imports": [
+      "process_service.ProcessService"
+    ],
+    "classes": [],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/srv/process_service.py",
+    "line_count": 65,
+    "imports": [
+      "multiprocessing",
+      "traceback"
+    ],
+    "classes": [
+      {
+        "name": "ProcessService",
+        "methods": [
+          "__init__",
+          "launch",
+          "close",
+          "call",
+          "_process_main_wrapper",
+          "_process_main"
+        ],
+        "docstring": ""
+      }
+    ],
+    "functions": [],
+    "docstring": "",
+    "error": ""
+  },
+  {
+    "path": "src/utils.py",
+    "line_count": 9,
+    "imports": [],
+    "classes": [],
+    "functions": [
+      "pivot"
+    ],
+    "docstring": "",
+    "error": ""
+  }
+]

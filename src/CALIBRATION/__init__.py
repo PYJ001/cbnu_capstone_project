@@ -5,6 +5,10 @@ from .calibration_main import (
     CalibrationModelService,
     create_calibration_model,
 )
+from .teleoperation_recorder import (
+    load_teleoperation_poses,
+    record_teleoperation_poses,
+)
 
 def collect_calibration_samples(*args, **kwargs):
     from .collect_calibration_samples import collect_calibration_samples as collect
@@ -19,4 +23,6 @@ __all__ = [
     "UVDRegressionModel",
     "collect_calibration_samples",
     "create_calibration_model",
+    "load_teleoperation_poses",
+    "record_teleoperation_poses",
 ]

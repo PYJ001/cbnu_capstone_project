@@ -4,6 +4,24 @@ __pycache__/
 venv/
 .env
 logs/
+build/
+dist/
+*.egg-info/
+code_analysis_output/
+code_analysis_output*/
+architecture_summary.md
+presentation_material.md
+project_analysis*.json
+project_analysis*.md
+project_report*.md
+project_tree*.txt
+!code_analysis/result/
+!code_analysis/result/architecture_summary*.md
+!code_analysis/result/presentation_material*.md
+!code_analysis/result/project_analysis*.json
+!code_analysis/result/project_analysis*.md
+!code_analysis/result/project_report*.md
+!code_analysis/result/project_tree*.txt
 
 trash/
 trash0604/
@@ -11,11 +29,20 @@ trash0608/
 
 *.mp4
 *.webm
+robot_motion_records/wave_hand/
 
 robot_camera_calibration_samples/*/sample_*.jpg
 robot_camera_calibration_samples/*/rejected/
+robot_camera_calibration_samples/*/calibration_report.json
+robot_camera_calibration_samples/*/calibration_report.txt
+robot_camera_calibration_samples/*/robot_camera_calibration_samples.csv
+robot_camera_calibration_samples/*/uv_coverage.png
 src/CALIBRATION/robot_camera_calibration_samples/*/sample_*.jpg
 src/CALIBRATION/robot_camera_calibration_samples/*/rejected/
+src/CALIBRATION/robot_camera_calibration_samples/*/calibration_report.json
+src/CALIBRATION/robot_camera_calibration_samples/*/calibration_report.txt
+src/CALIBRATION/robot_camera_calibration_samples/*/robot_camera_calibration_samples.csv
+src/CALIBRATION/robot_camera_calibration_samples/*/uv_coverage.png
 
 runs/**
 !runs/end_effector_yolo12n_416_safe/

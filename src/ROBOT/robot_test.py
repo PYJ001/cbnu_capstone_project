@@ -16,8 +16,6 @@ except ImportError:
 
 DEFAULT_ACTIONS = [
     "DNC",
-    "WAV",
-    "SKH",
     "MOV",
     "MVA",
     "GRB",
@@ -27,9 +25,11 @@ DEFAULT_ACTIONS = [
     "THR",
     "HRT",
     "HND",
+    "PRN",
+    "STD",
 ]
 
-OBJECT_ACTIONS = {"MOV", "MVA", "GRB"}
+OBJECT_ACTIONS = {"MOV", "MVA", "GRB", "TRW", "HND"}
 
 
 class PseudoRGBD:
