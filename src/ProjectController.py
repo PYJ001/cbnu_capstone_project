@@ -205,27 +205,32 @@ class ProjectController:
                 "using default grid"
             )
 
+        self._begin_calibration_capture_mode()
+
         try:
-            calibration_data = self.calibration_model.run_recalibration(
-                robot=self.robot,
-                rgbd_cam=self.rgbd_cam,
-                capture_callback=self._capture_calibration_robot_detection,
-                calibration_poses_path=(
-                    str(calibration_poses_path)
-                    if calibration_poses_path is not None
-                    else None
-                ),
-                cycles=1,
-                move_duration=2.0,
-                settle_time=0.5,
-                sample_hz=8.0,
-                max_samples_per_pose=None,
-                max_attempts_per_pose=None,
-                min_uv_distance=0.0,
-                sample_while_moving=True,
-                min_robot_conf=0.45,
-                return_home=True,
-            )
+            try:
+                calibration_data = self.calibration_model.run_recalibration(
+                    robot=self.robot,
+                    rgbd_cam=self.rgbd_cam,
+                    capture_callback=self._capture_calibration_robot_detection,
+                    calibration_poses_path=(
+                        str(calibration_poses_path)
+                        if calibration_poses_path is not None
+                        else None
+                    ),
+                    cycles=1,
+                    move_duration=2.0,
+                    settle_time=0.5,
+                    sample_hz=15.0,
+                    max_samples_per_pose=None,
+                    max_attempts_per_pose=None,
+                    min_uv_distance=0.0,
+                    sample_while_moving=True,
+                    min_robot_conf=0.45,
+                    return_home=True,
+                )
+            finally:
+                self._end_calibration_capture_mode()
         except Exception as exc:
             result_text = f"Recalibration failed: {exc}"
             print(f"[ProjectController] {result_text}")
@@ -273,6 +278,24 @@ class ProjectController:
             action_result="success",
         )
         return True
+
+    def _begin_calibration_capture_mode(self):
+        if self.rgbd_cam is None:
+            return False
+
+        if hasattr(self.rgbd_cam, "begin_high_speed_capture"):
+            return self.rgbd_cam.begin_high_speed_capture(realsense_fps=30)
+
+        return False
+
+    def _end_calibration_capture_mode(self):
+        if self.rgbd_cam is None:
+            return False
+
+        if hasattr(self.rgbd_cam, "end_high_speed_capture"):
+            return self.rgbd_cam.end_high_speed_capture()
+
+        return False
 
     def _find_latest_calibration_poses_path(self):
         root = Path("src/CALIBRATION/teleoperation_poses")
@@ -346,10 +369,14 @@ class ProjectController:
         try:
             vlm_result = self._run_vlm(frame, user_command=user_command)
             yolo_robot = self._run_yolo_robot(frame, depth)
+            vlm_objects = self._merge_command_target_objects(
+                vlm_result.get("objects", []),
+                user_command=user_command,
+            )
             yolo_world = self._run_yolo_world(
                 frame=frame,
                 depth=depth,
-                vlm_objects=vlm_result.get("objects", []),
+                vlm_objects=vlm_objects,
             )
             yolo_robot, yolo_world = self._apply_calibration(
                 yolo_robot=yolo_robot,
@@ -362,13 +389,22 @@ class ProjectController:
                 "yolo_robot": yolo_robot,
                 "yolo_world": yolo_world,
                 "vlm_summary": vlm_result.get("summary", ""),
-                "vlm_objects": vlm_result.get("objects", []),
+                "vlm_objects": vlm_objects,
                 "yolo_world_classes": self.yolo_world.get_classes(),
             }
 
         except Exception as exc:
             print(f"[ProjectController] fresh perception request failed: {exc}")
             return None
+
+    def _merge_command_target_objects(self, vlm_objects, user_command=""):
+        objects = list(vlm_objects or [])
+        command = str(user_command).lower()
+
+        if "hand" in command and "hand" not in objects:
+            objects.append("hand")
+
+        return objects
 
     def _run_vlm(self, frame, user_command=""):
         if self.vlm is None:
@@ -404,10 +440,10 @@ class ProjectController:
         return yolo_robot, yolo_world
 
     def _capture_calibration_robot_detection(self):
-        rgbd_frame = self._request_latest_rgbd_frame()
+        rgbd_frame = self._capture_rgbd_frame()
 
         if rgbd_frame is None:
-            rgbd_frame = self._capture_rgbd_frame()
+            rgbd_frame = self._request_latest_rgbd_frame()
 
         if rgbd_frame is None:
             raise RuntimeError("camera data is not ready")

@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 
 try:
     from src.LLM_PLANNER.llm import LLM
@@ -59,6 +60,7 @@ class LLMPlanner:
         action_sequence = self._validate_action_sequence(
             action_sequence=action_sequence,
             available_actions=self.available_actions,
+            user_command=user_command,
         )
 
         print_out = self._make_print_out(
@@ -107,31 +109,49 @@ For intent "available_actions_question", action_sequence must be empty.
 For intent "other", action_sequence must be empty.
 For intent "action_request", make action_sequence using only available action keys.
 
-If the user asks to dance, use DNC.
-If the user asks to move to an object, use MOV with that detected object.
-If the user asks to move above an object, use MVA with that detected object.
+Current action meanings:
+- DNC: dance. It keeps the current gripper state.
+- MOV: move to a detected object. Requires an object in yolo_world and keeps the current gripper state.
+- MVA: move above a detected object. Requires an object in yolo_world and keeps the current gripper state.
+- GRB: grab a detected object. Requires an object in yolo_world. It performs stand up, open gripper, move to object, close gripper, and lift.
+- REL: release or open the gripper. It does not move to an object and does not need an object.
+- CLS: close the gripper only. It does not move to an object and does not need an object.
+- LFT: lift from the current pose. It keeps the current gripper state.
+- THR: throw the currently held object. It closes the gripper, returns to default pose, then quickly stands up while opening the gripper.
+- HRT: draw a heart.
+- HND: hand over toward the camera/person using the nearest-depth calibration pose. It keeps the current gripper state and does not need an object.
+- PRN: lie down or crouch down. It keeps the current gripper state.
+- STD: stand up straight. It keeps the current gripper state.
+- GRT: greet or wave hello. It keeps the current gripper state.
+- BAS: return to default pose. It moves joints to 0,0,0,0 and keeps the current gripper state.
 
-If the user asks to grab an object, use GRB with that detected object.
-GRB already includes move-to-object, close gripper, and lift.
-Do not add MOV before GRB.
-
-If the user asks to lift an object, use GRB with that detected object.
-If the robot is already holding something and the user asks to lift it, use LFT.
-
-If the user asks to release, put down, or let go of an object, use REL.
-If the user asks to throw an object, use THR.
-If the user asks to draw a heart, use HRT.
-If the user asks to hand an object to the camera/person, use HND.
-If the user asks the robot to lie down, crouch down, or 엎드리기/엎드려, use PRN.
-If the user asks the robot to stand up, straighten up, or 일어서기/일어서, use STD.
-If the user says hello or asks the robot to greet, wave hello, say hello, 인사하기/인사해/안녕 해줘, use GRT.
-If the user asks the robot to return to default pose, base pose, 기본 동작으로 돌아가기/기본 자세/기본 동작, use BAS.
+Planning rules:
+- If the user asks to dance, use DNC.
+- If the user asks to move to an object, use MOV with that detected object.
+- If the user asks to move above an object, use MVA with that detected object.
+- If the user asks to grab, pick up, or hold a detected object, use GRB with that detected object. Do not add MOV before GRB.
+- If the user asks to grab my hand, grab a hand, hold my hand, or shake my hand, use GRB with obj "hand" if hand is detected.
+- If the user asks to lift an object that is not already held, use GRB with that detected object.
+- If the user says the robot is already holding something and asks to lift it, use LFT.
+- If the user asks to release, put down, let go, or open the gripper, use REL with no object.
+- If the user asks to close the gripper only, use CLS with no object. Do not use GRB.
+- If the user asks to open and close the gripper, use REL then CLS.
+- If the user asks to repeat open and close the gripper N times, repeat REL then CLS exactly N times.
+- If the user asks to throw an object or throw what the robot is holding, use THR.
+- If the user asks to draw a heart, use HRT.
+- If the user asks to hand something to the camera/person, use HND.
+- If the user asks the robot to lie down, crouch down, or 엎드리기/엎드려, use PRN.
+- If the user asks the robot to stand up, straighten up, or 일어서기/일어서, use STD.
+- If the user says hello or asks the robot to greet, wave hello, say hello, 인사하기/인사해/안녕 해줘, use GRT.
+- If the user asks the robot to return to default pose, base pose, 기본 동작으로 돌아가기/기본 자세/기본 동작, use BAS.
 If the user asks to put object A in/on/onto object B, use:
 1. GRB with object A
 2. MVA with object B
 3. REL
 
 If a required object is not detected in yolo_world, do not include actions that need that object.
+Do not attach obj to actions that do not require an object: REL, CLS, LFT, THR, HRT, HND, PRN, STD, GRT, BAS, DNC.
+Never use GRB as a substitute for close gripper only.
 
 user_command:
 {user_command}
@@ -329,7 +349,7 @@ Return only JSON:
                 continue
 
             name = self._str(action.get("name")).upper()
-            obj = self._str(action.get("obj")).lower()
+            obj = self._normalize_object_name(action.get("obj"))
 
             description = available_actions.get(name, "")
 
@@ -353,11 +373,18 @@ Return only JSON:
         self,
         action_sequence,
         available_actions,
+        user_command="",
     ):
         if not isinstance(action_sequence, list):
             return []
 
+        gripper_sequence = self._make_gripper_sequence(user_command)
+
+        if gripper_sequence is not None:
+            return gripper_sequence
+
         allowed_names = set(available_actions.keys())
+        object_action_names = {"MOV", "MVA", "GRB"}
 
         result = []
 
@@ -366,19 +393,94 @@ Return only JSON:
                 continue
 
             name = self._str(action.get("name")).upper()
-            obj = self._str(action.get("obj")).lower()
+            obj = self._normalize_object_name(action.get("obj"))
 
             if name not in allowed_names:
                 continue
 
             clean_action = {"name": name}
 
-            if obj != "":
+            if name in object_action_names:
+                if obj == "":
+                    continue
                 clean_action["obj"] = obj
 
             result.append(clean_action)
 
         return result
+
+    def _make_gripper_sequence(self, user_command):
+        text = self._str(user_command).lower()
+
+        if "gripper" not in text:
+            return None
+
+        wants_open = "open" in text
+        wants_close = "close" in text
+
+        if wants_open and wants_close:
+            repeat_count = self._extract_repeat_count(text)
+            sequence = []
+
+            for _ in range(repeat_count):
+                sequence.append({"name": "REL"})
+                sequence.append({"name": "CLS"})
+
+            return sequence
+
+        if wants_close:
+            return [{"name": "CLS"}]
+
+        if wants_open:
+            return [{"name": "REL"}]
+
+        return None
+
+    def _extract_repeat_count(self, text):
+        match = re.search(r"\b(?:repeat|x|times?)\s*(\d+)\b", text)
+
+        if match is None:
+            match = re.search(r"\b(\d+)\s*(?:times?|x)\b", text)
+
+        if match is not None:
+            return max(1, min(20, int(match.group(1))))
+
+        word_counts = {
+            "once": 1,
+            "one": 1,
+            "twice": 2,
+            "two": 2,
+            "three": 3,
+            "four": 4,
+            "five": 5,
+            "six": 6,
+            "seven": 7,
+            "eight": 8,
+            "nine": 9,
+            "ten": 10,
+        }
+
+        for word, count in word_counts.items():
+            if re.search(rf"\b{word}\b", text):
+                return count
+
+        return 1
+
+    def _normalize_object_name(self, obj):
+        obj = self._str(obj).lower()
+        obj = obj.replace("'s", "")
+        obj = " ".join(obj.split())
+
+        if "hand" in obj:
+            return "hand"
+
+        if "bottle" in obj:
+            return "bottle"
+
+        if "cup" in obj or "mug" in obj:
+            return "cup"
+
+        return obj
 
     # ============================================================
     # Helpers

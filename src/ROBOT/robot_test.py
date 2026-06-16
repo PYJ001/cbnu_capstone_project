@@ -20,6 +20,7 @@ DEFAULT_ACTIONS = [
     "MVA",
     "GRB",
     "REL",
+    "CLS",
     "LFT",
     "THR",
     "HRT",

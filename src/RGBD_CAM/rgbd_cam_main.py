@@ -44,6 +44,7 @@ class RGBD:
         self.realsense_restart_count = 0
         self.realsense_hardware_reset_count = 0
         self.placeholder_reported = False
+        self._capture_mode_stack = []
 
     # lifecycle
     def launch(self):
@@ -202,6 +203,77 @@ class RGBD:
 
     def get_camera_data(self):
         return self.capture_rgbd_frame()
+
+    def begin_high_speed_capture(self, realsense_fps=30):
+        state = {
+            "camera_backend": self.camera_backend,
+            "realsense_fps": self.realsense_fps,
+            "was_running": self.camera_running,
+        }
+        self._capture_mode_stack.append(state)
+
+        if self.camera_backend != "realsense":
+            print(
+                "[RGBD] high-speed calibration capture skipped: "
+                f"backend={self.camera_backend}"
+            )
+            return state
+
+        target_fps = int(realsense_fps)
+
+        if target_fps <= 0 or target_fps == self.realsense_fps:
+            return state
+
+        print(
+            "[RGBD] switching RealSense FPS for calibration: "
+            f"{self.realsense_fps}->{target_fps}"
+        )
+        self._restart_realsense_stream(realsense_fps=target_fps)
+        return state
+
+    def end_high_speed_capture(self):
+        if len(self._capture_mode_stack) == 0:
+            return False
+
+        state = self._capture_mode_stack.pop()
+
+        if (
+            state.get("camera_backend") == "realsense"
+            and self.camera_backend == "realsense"
+            and int(state.get("realsense_fps", self.realsense_fps)) != self.realsense_fps
+        ):
+            print(
+                "[RGBD] restoring RealSense FPS after calibration: "
+                f"{self.realsense_fps}->{state['realsense_fps']}"
+            )
+            self._restart_realsense_stream(
+                realsense_fps=state["realsense_fps"],
+                restart_thread=bool(state.get("was_running", True)),
+            )
+
+        return True
+
+    def _restart_realsense_stream(self, realsense_fps, restart_thread=True):
+        was_running = self.camera_running
+        self.camera_running = False
+
+        if self.camera_thread is not None:
+            self.camera_thread.join(timeout=1.0)
+            self.camera_thread = None
+
+        with self.read_lock:
+            self._close_camera()
+            self.realsense_fps = int(realsense_fps)
+
+            with self.latest_lock:
+                self.latest_rgbd_frame = None
+
+            self._open_camera()
+
+        if restart_thread and was_running:
+            self._start_camera_stream()
+
+        return True
 
     # loop
     def camera_loop(self):

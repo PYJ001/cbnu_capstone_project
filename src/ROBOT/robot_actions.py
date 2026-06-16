@@ -10,6 +10,7 @@ MOV : move to object
 MVA : move above object
 GRB : grab object
 REL : release
+CLS : close gripper
 LFT : lift from current pose
 THR : throw object
 HRT : draw heart
@@ -53,6 +54,7 @@ class RobotActions:
         "MVA": "move above object",
         "GRB": "grab object",
         "REL": "release",
+        "CLS": "close gripper",
         "LFT": "lift",
         "THR": "throw",
         "HRT": "draw heart",
@@ -71,6 +73,7 @@ class RobotActions:
             "MVA": self.move_above_object,
             "GRB": self.grab,
             "REL": self.release,
+            "CLS": self.close_gripper,
             "LFT": self.lift,
             "THR": self.throw,
             "HRT": self.draw_heart,
@@ -189,6 +192,10 @@ class RobotActions:
 
     def release(self, obj=None, rgbd_cam=None):
         ok = self.robot._open_gripper()
+        return "success" if ok else "failed"
+
+    def close_gripper(self, obj=None, rgbd_cam=None):
+        ok = self.robot._close_gripper()
         return "success" if ok else "failed"
 
     def lift(self, obj=None, rgbd_cam=None):
@@ -432,6 +439,10 @@ def release(robot):
     return RobotActions(robot).release()
 
 
+def close_gripper(robot):
+    return RobotActions(robot).close_gripper()
+
+
 def lift(robot):
     return RobotActions(robot).lift()
 
@@ -530,6 +541,10 @@ def REL(robot):
     return release(robot)
 
 
+def CLS(robot):
+    return close_gripper(robot)
+
+
 def LFT(robot):
     return lift(robot)
 
@@ -568,6 +583,7 @@ ACTION_DESCRIPTIONS = {
     "MVA": "move above object",
     "GRB": "grab object",
     "REL": "release",
+    "CLS": "close gripper",
     "LFT": "lift",
     "THR": "throw",
     "HRT": "draw heart",
@@ -584,6 +600,7 @@ ACTION_FUNCTIONS = {
     "MVA": MVA,
     "GRB": GRB,
     "REL": REL,
+    "CLS": CLS,
     "LFT": LFT,
     "THR": THR,
     "HRT": HRT,

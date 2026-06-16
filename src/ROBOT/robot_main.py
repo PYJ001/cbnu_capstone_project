@@ -223,6 +223,7 @@ class ROBOT:
                 6: "STD",
                 7: "GRT",
                 8: "BAS",
+                9: "CLS",
             }
             return table.get(action, "UNKNOWN"), None
 
@@ -488,15 +489,37 @@ class ROBOT:
 
     def _find_object(self, yolo_world, obj_name):
         yolo_world = self._as_object_list(yolo_world)
-        obj_name = str(obj_name).lower()
+        obj_name = self._canonical_object_name(obj_name)
 
         for item in yolo_world:
-            name = str(item.get("name", "")).lower()
+            name = self._canonical_object_name(item.get("name", ""))
 
             if name == obj_name:
                 return item
 
         return None
+
+    def _canonical_object_name(self, name):
+        name = str(name).strip().lower()
+        name = name.replace("'s", "")
+        name = " ".join(name.split())
+
+        if "hand" in name:
+            return "hand"
+
+        if "bottle" in name:
+            return "bottle"
+
+        if "cup" in name or "mug" in name:
+            return "cup"
+
+        if "box" in name:
+            return "box"
+
+        if "basket" in name or "container" in name or name == "bin":
+            return "basket"
+
+        return name
 
     def _as_object_list(self, detections):
         if detections is None:

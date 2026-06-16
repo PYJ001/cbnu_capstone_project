@@ -212,7 +212,7 @@ class YoloWorldDetector:
         if len(valid) == 0:
             return None
 
-        return float(np.median(valid))
+        return float(np.min(valid))
 
 
 class YoloWorld:
