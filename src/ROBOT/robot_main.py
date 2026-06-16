@@ -221,6 +221,8 @@ class ROBOT:
                 4: "MVA",
                 5: "PRN",
                 6: "STD",
+                7: "GRT",
+                8: "BAS",
             }
             return table.get(action, "UNKNOWN"), None
 

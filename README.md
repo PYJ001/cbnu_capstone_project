@@ -205,6 +205,7 @@ Record teleoperated motion:
 ```bash
 python3 test_record_motion.py --name heart --hz 5
 python3 test_record_motion.py --name dance --hz 5
+python3 test_record_motion.py --name greeting --hz 5
 python3 test_record_motion.py --name wave_hand --hz 5
 ```
 

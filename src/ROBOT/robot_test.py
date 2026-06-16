@@ -20,16 +20,17 @@ DEFAULT_ACTIONS = [
     "MVA",
     "GRB",
     "REL",
-    "TRW",
     "LFT",
     "THR",
     "HRT",
     "HND",
     "PRN",
     "STD",
+    "GRT",
+    "BAS",
 ]
 
-OBJECT_ACTIONS = {"MOV", "MVA", "GRB", "TRW", "HND"}
+OBJECT_ACTIONS = {"MOV", "MVA", "GRB", "HND"}
 
 
 class PseudoRGBD:

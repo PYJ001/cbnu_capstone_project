@@ -280,6 +280,7 @@ def draw_robot_markers(frame, yolo_robot):
         v = int(obj.get("v", 0))
         d = obj.get("d", None)
         bbox = obj.get("bbox")
+        depth_radius = obj.get("depth_radius", 20)
 
         _draw_object_marker(
             vis=vis,
@@ -292,6 +293,7 @@ def draw_robot_markers(frame, yolo_robot):
             text_offset=(8, -8),
             thickness=2,
         )
+        _draw_depth_radius(vis, u, v, depth_radius)
 
     return vis
 
@@ -357,6 +359,22 @@ def _draw_object_marker(
         max(1, thickness),
         cv2.LINE_AA,
     )
+
+
+def _draw_depth_radius(vis, u, v, radius):
+    try:
+        radius = int(float(radius))
+    except (TypeError, ValueError):
+        return
+
+    if radius <= 0:
+        return
+
+    h, w = vis.shape[:2]
+    u = int(np.clip(u, 0, w - 1))
+    v = int(np.clip(v, 0, h - 1))
+
+    cv2.circle(vis, (u, v), radius, (255, 80, 80), 2, cv2.LINE_AA)
 
 
 def make_depth_view(depth, target_shape):

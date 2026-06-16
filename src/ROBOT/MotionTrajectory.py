@@ -61,6 +61,7 @@ def replay_motion_csv(
     verbose=False,
     clamp_gripper=True,
     skip_invalid=False,
+    gripper_override=None,
 ):
     if speed <= 0:
         raise ValueError("speed must be positive")
@@ -87,6 +88,9 @@ def replay_motion_csv(
             row["j4"],
             row["gripper"],
         ]
+
+        if gripper_override is not None:
+            pose[4] = float(gripper_override)
 
         pose = sanitize_replay_pose(
             robot=robot,

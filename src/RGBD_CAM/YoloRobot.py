@@ -12,12 +12,14 @@ class YoloRobotDetector:
         imgsz=640,
         device=0,
         robot_depth_offset=0.05,
+        robot_depth_center_radius=20,
     ):
         self.weight_path         = Path(weight_path)
         self.conf_thres          = conf_thres
         self.imgsz               = imgsz
         self.device              = device
         self.robot_depth_offset  = float(robot_depth_offset)
+        self.robot_depth_center_radius = int(robot_depth_center_radius)
 
         print("[YoloRobotDetector] loading robot YOLO...")
         self.model = YOLO(str(self.weight_path))
@@ -61,7 +63,12 @@ class YoloRobotDetector:
 
         u = int((x1 + x2) / 2)
         v = int((y1 + y2) / 2)
-        d = self._get_depth_at(depth, u, v)
+        d = self._get_nearest_depth_near_center(
+            depth=depth,
+            u=u,
+            v=v,
+            xyxy=xyxy,
+        )
 
         return {
             "name": name,
@@ -70,6 +77,7 @@ class YoloRobotDetector:
             "d": d,
             "conf": conf,
             "bbox": [float(x1), float(y1), float(x2), float(y2)],
+            "depth_radius": int(self.robot_depth_center_radius),
         }
 
     def _apply_robot_depth_offset(self, depth_value):
@@ -78,7 +86,7 @@ class YoloRobotDetector:
 
         return float(depth_value) + self.robot_depth_offset
 
-    def _get_depth_at(self, depth, u, v, kernel=5):
+    def _get_nearest_depth_near_center(self, depth, u, v, xyxy):
         if depth is None:
             return None
 
@@ -86,11 +94,16 @@ class YoloRobotDetector:
 
         u = int(np.clip(u, 0, w - 1))
         v = int(np.clip(v, 0, h - 1))
+        radius = max(1, int(self.robot_depth_center_radius))
+        bx1, by1, bx2, by2 = xyxy
 
-        x1 = max(0, u - kernel)
-        x2 = min(w, u + kernel + 1)
-        y1 = max(0, v - kernel)
-        y2 = min(h, v + kernel + 1)
+        x1 = max(0, int(np.floor(max(bx1, u - radius))))
+        x2 = min(w, int(np.ceil(min(bx2, u + radius + 1))))
+        y1 = max(0, int(np.floor(max(by1, v - radius))))
+        y2 = min(h, int(np.ceil(min(by2, v + radius + 1))))
+
+        if x1 >= x2 or y1 >= y2:
+            return None
 
         patch = depth[y1:y2, x1:x2].astype(np.float32)
 
@@ -100,7 +113,7 @@ class YoloRobotDetector:
         if len(valid) == 0:
             return None
 
-        return float(np.median(valid))
+        return float(np.min(valid))
 
 
 class YoloRobot:

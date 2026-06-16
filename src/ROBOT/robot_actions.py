@@ -1,4 +1,6 @@
+import csv
 import time
+from pathlib import Path
 
 from .MotionTrajectory import find_latest_motion_csv, replay_motion_csv
 
@@ -8,20 +10,33 @@ MOV : move to object
 MVA : move above object
 GRB : grab object
 REL : release
-TRW : throw away / discard
 LFT : lift from current pose
 THR : throw object
 HRT : draw heart
 HND : hand over to camera/person
 PRN : prone / lie down
 STD : stand up straight
+GRT : greet / wave hello
+BAS : return to default pose
 """
 
 MOVE_ABOVE_ANGLE_OFFSET = [0.0, -0.24, 0.21, -0.07]
-THROW_AWAY_POSE = [0.65, -0.62, 0.78, -0.34, 0.0]
 HAND_OVER_POSE = [0.0, -0.55, 0.85, -0.45, 0.0]
-PRONE_POSE = [0.0, 1.0, 0.0, 0.0, 0.0]
-STAND_POSE = [0.0, 0.0, 0.0, 0.0, 0.0]
+DEFAULT_POSE = [0.0, 0.0, 0.0, 0.0, 0.0]
+PRONE_POSE = [
+    -0.06289321184158325,
+    1.2486603260040283,
+    -0.9495341181755066,
+    -0.04601942375302315,
+    -3.5252818634035066e-05,
+]
+STAND_POSE = [
+    -0.07209710031747818,
+    0.1089126393198967,
+    -1.509437084197998,
+    -0.13038836419582367,
+    -3.5252818634035066e-05,
+]
 
 
 class RobotActions:
@@ -38,13 +53,14 @@ class RobotActions:
         "MVA": "move above object",
         "GRB": "grab object",
         "REL": "release",
-        "TRW": "throw away",
         "LFT": "lift",
         "THR": "throw",
         "HRT": "draw heart",
         "HND": "hand over to camera or person",
         "PRN": "lie down",
         "STD": "stand up straight",
+        "GRT": "greet or wave hello",
+        "BAS": "return to default pose",
     }
 
     def __init__(self, robot):
@@ -55,13 +71,14 @@ class RobotActions:
             "MVA": self.move_above_object,
             "GRB": self.grab,
             "REL": self.release,
-            "TRW": self.throw_away,
             "LFT": self.lift,
             "THR": self.throw,
             "HRT": self.draw_heart,
             "HND": self.hand_over,
             "PRN": self.lie_down,
             "STD": self.stand_up,
+            "GRT": self.greet,
+            "BAS": self.return_to_default,
         }
 
     def run(self, action_name, obj=None, rgbd_cam=None):
@@ -82,17 +99,22 @@ class RobotActions:
         return self.registry.get(action_name)
 
     def dance(self, obj=None, rgbd_cam=None):
-        result = self._run_recorded_motion("dance", speed=3.0)
+        result = self._run_recorded_motion(
+            "dance",
+            speed=3.0,
+            preserve_gripper=True,
+        )
 
         if result is not None:
             return result
 
+        gripper = self._current_gripper()
         poses = [
-            [0.30, -0.95, 0.95, -0.15, 0.0],
-            [-0.30, -0.95, 0.95, -0.15, 0.0],
-            [0.30, -0.80, 1.05, -0.35, 0.0],
-            [-0.30, -0.80, 1.05, -0.35, 0.0],
-            self.robot.base_pose,
+            [0.30, -0.95, 0.95, -0.15, gripper],
+            [-0.30, -0.95, 0.95, -0.15, gripper],
+            [0.30, -0.80, 1.05, -0.35, gripper],
+            [-0.30, -0.80, 1.05, -0.35, gripper],
+            self._with_gripper(self.robot.base_pose, gripper),
         ]
 
         return self._run_pose_sequence(poses, duration=0.8, sleep=0.15)
@@ -106,6 +128,7 @@ class RobotActions:
         if target_pose is None:
             return "failed"
 
+        target_pose = self._with_current_gripper(target_pose)
         ok = self.robot._move_joint(*target_pose, duration=1.0)
         return "success" if ok else "failed"
 
@@ -116,13 +139,26 @@ class RobotActions:
         ok = self.robot.move_to_uvd_offset(
             obj,
             angle_offset=MOVE_ABOVE_ANGLE_OFFSET,
-            gripper=self.robot.gripper_open,
+            gripper=self._current_gripper(),
             duration=1.2,
         )
 
         return "success" if ok else "failed"
 
     def grab(self, obj=None, rgbd_cam=None):
+        result = self.stand_up()
+
+        if result != "success":
+            return result
+
+        time.sleep(0.15)
+        ok = self.robot._open_gripper()
+
+        if not ok:
+            return "failed"
+
+        time.sleep(0.15)
+
         if obj is None:
             ok = self.robot._close_gripper()
             return "success" if ok else "failed"
@@ -136,7 +172,6 @@ class RobotActions:
             return "failed"
 
         steps = [
-            (self.robot._open_gripper, (), {}),
             (self.move_to_object, (target_obj,), {}),
             (self.robot._close_gripper, (), {}),
             (self.robot.lift_current_pose, (), {}),
@@ -160,48 +195,25 @@ class RobotActions:
         ok = self.robot.lift_current_pose()
         return "success" if ok else "failed"
 
-    def throw_away(self, obj=None, rgbd_cam=None):
-        if obj is not None:
-            result = self.grab(obj=obj, rgbd_cam=rgbd_cam)
-
-            if result != "success":
-                return result
-
-        ok = self.robot._move_joint(*THROW_AWAY_POSE, duration=1.0)
-
-        if not ok:
-            return "failed"
-
-        time.sleep(0.15)
-        ok = self.robot._open_gripper()
-
-        if not ok:
-            return "failed"
-
-        time.sleep(0.15)
-        ok = self.robot.move_to_base_pose(duration=1.0)
-        return "success" if ok else "failed"
-
     def throw(self, obj=None, rgbd_cam=None):
-        poses = [
-            [0.0, -0.65, 0.85, -0.40, 0.0],
-            [0.35, -0.55, 0.70, -0.35, 0.0],
-        ]
+        ok = self.robot._close_gripper()
 
-        result = self._run_pose_sequence(poses, duration=0.45, sleep=0.08)
+        if not ok:
+            return "failed"
+
+        time.sleep(0.1)
+        result = self.return_to_default(duration=0.6)
 
         if result != "success":
             return result
 
-        ok = self.robot._open_gripper()
+        throw_pose = self._with_gripper(STAND_POSE, self.robot.gripper_open)
+        ok = self.robot._move_joint(*throw_pose, duration=0.25)
 
         if not ok:
             return "failed"
 
-        time.sleep(0.15)
-
-        ok = self.robot.move_to_base_pose(duration=1.0)
-        return "success" if ok else "failed"
+        return "success"
 
     def draw_heart(self, obj=None, rgbd_cam=None):
         result = self._run_recorded_motion("heart", speed=2.0)
@@ -222,30 +234,61 @@ class RobotActions:
 
         return self._run_pose_sequence(poses, duration=0.55, sleep=0.06)
 
+    def greet(self, obj=None, rgbd_cam=None):
+        result = self._run_recorded_motion(
+            "greeting",
+            speed=2.0,
+            preserve_gripper=True,
+        )
+
+        if result is not None:
+            return result
+
+        gripper = self._current_gripper()
+        poses = [
+            [0.0, -0.70, 1.05, -0.35, gripper],
+            [0.35, -0.70, 1.05, -0.35, gripper],
+            [-0.35, -0.70, 1.05, -0.35, gripper],
+            [0.35, -0.70, 1.05, -0.35, gripper],
+            [0.0, -0.70, 1.05, -0.35, gripper],
+            self._with_gripper(self.robot.base_pose, gripper),
+        ]
+
+        return self._run_pose_sequence(poses, duration=0.28, sleep=0.04)
+
     def hand_over(self, obj=None, rgbd_cam=None):
-        if obj is not None:
-            result = self.grab(obj=obj, rgbd_cam=rgbd_cam)
+        pose = self._find_nearest_calibration_pose()
 
-            if result != "success":
-                return result
+        if pose is None:
+            pose = HAND_OVER_POSE
 
-        ok = self.robot._move_joint(*HAND_OVER_POSE, duration=1.0)
-
-        if not ok:
-            return "failed"
-
-        time.sleep(0.15)
-        ok = self.robot._open_gripper()
+        ok = self.robot._move_joint(
+            *self._with_current_gripper(pose),
+            duration=1.0,
+        )
         return "success" if ok else "failed"
 
     def lie_down(self, obj=None, rgbd_cam=None):
-        ok = self.robot._move_joint(*PRONE_POSE, duration=1.0)
+        ok = self.robot._move_joint(
+            *self._with_current_gripper(PRONE_POSE),
+            duration=1.0,
+        )
         time.sleep(1.0)
         return "success" if ok else "failed"
 
     def stand_up(self, obj=None, rgbd_cam=None):
-        ok = self.robot._move_joint(*STAND_POSE, duration=1.0)
+        ok = self.robot._move_joint(
+            *self._with_current_gripper(STAND_POSE),
+            duration=1.0,
+        )
         time.sleep(1.0)
+        return "success" if ok else "failed"
+
+    def return_to_default(self, obj=None, rgbd_cam=None, duration=1.0):
+        ok = self.robot._move_joint(
+            *self._with_current_gripper(DEFAULT_POSE),
+            duration=duration,
+        )
         return "success" if ok else "failed"
 
     def _run_pose_sequence(self, poses, duration=0.8, sleep=0.1):
@@ -259,7 +302,7 @@ class RobotActions:
 
         return "success"
 
-    def _run_recorded_motion(self, name, speed=1.0):
+    def _run_recorded_motion(self, name, speed=1.0, preserve_gripper=False):
         csv_path = find_latest_motion_csv(name)
 
         if csv_path is None:
@@ -269,7 +312,78 @@ class RobotActions:
             f"[RobotActions] replay recorded motion: "
             f"{name} ({csv_path}) speed={speed}"
         )
-        return replay_motion_csv(self.robot, csv_path, speed=speed)
+        gripper_override = self._current_gripper() if preserve_gripper else None
+        return replay_motion_csv(
+            self.robot,
+            csv_path,
+            speed=speed,
+            gripper_override=gripper_override,
+        )
+
+    def _current_gripper(self):
+        pose = self.robot.get_pose()
+        return float(pose[4])
+
+    def _with_current_gripper(self, pose):
+        return self._with_gripper(pose, self._current_gripper())
+
+    def _with_gripper(self, pose, gripper):
+        pose = [float(value) for value in pose[:5]]
+        pose[4] = float(gripper)
+        return pose
+
+    def _find_nearest_calibration_pose(
+        self,
+        root="src/CALIBRATION/robot_camera_calibration_samples",
+    ):
+        paths = sorted(Path(root).glob("*/robot_camera_calibration_samples.csv"))
+
+        if len(paths) == 0:
+            return None
+
+        best_row = None
+        best_depth = None
+
+        for path in reversed(paths):
+            try:
+                with path.open("r", newline="", encoding="utf-8") as f:
+                    for row in csv.DictReader(f):
+                        depth = self._parse_float(row.get("robot_d"))
+
+                        if depth is None:
+                            continue
+
+                        if best_depth is None or depth < best_depth:
+                            best_row = row
+                            best_depth = depth
+            except OSError:
+                continue
+
+            if best_row is not None:
+                break
+
+        if best_row is None:
+            return None
+
+        pose = [
+            self._parse_float(best_row.get(name))
+            for name in ["j1", "j2", "j3", "j4", "gripper"]
+        ]
+
+        if any(value is None for value in pose):
+            return None
+
+        print(
+            "[RobotActions] hand-over calibration pose: "
+            f"depth={best_depth:.6f}"
+        )
+        return pose
+
+    def _parse_float(self, value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
     def _extract_target_pose(self, obj):
         if not isinstance(obj, dict):
@@ -342,6 +456,14 @@ def stand_up(robot):
     return RobotActions(robot).stand_up()
 
 
+def greet(robot):
+    return RobotActions(robot).greet()
+
+
+def return_to_default(robot):
+    return RobotActions(robot).return_to_default()
+
+
 def _run_pose_sequence(robot, poses, duration=0.8, sleep=0.1):
     for pose in poses:
         ok = robot._move_joint(*pose, duration=duration)
@@ -408,10 +530,6 @@ def REL(robot):
     return release(robot)
 
 
-def TRW(robot, obj=None, rgbd_cam=None):
-    return RobotActions(robot).throw_away(obj=obj, rgbd_cam=rgbd_cam)
-
-
 def LFT(robot):
     return lift(robot)
 
@@ -436,19 +554,28 @@ def STD(robot):
     return stand_up(robot)
 
 
+def GRT(robot):
+    return greet(robot)
+
+
+def BAS(robot):
+    return return_to_default(robot)
+
+
 ACTION_DESCRIPTIONS = {
     "DNC": "dance",
     "MOV": "move to object",
     "MVA": "move above object",
     "GRB": "grab object",
     "REL": "release",
-    "TRW": "throw away",
     "LFT": "lift",
     "THR": "throw",
     "HRT": "draw heart",
     "HND": "hand over to camera or person",
     "PRN": "lie down",
     "STD": "stand up straight",
+    "GRT": "greet or wave hello",
+    "BAS": "return to default pose",
 }
 
 ACTION_FUNCTIONS = {
@@ -457,13 +584,14 @@ ACTION_FUNCTIONS = {
     "MVA": MVA,
     "GRB": GRB,
     "REL": REL,
-    "TRW": TRW,
     "LFT": LFT,
     "THR": THR,
     "HRT": HRT,
     "HND": HND,
     "PRN": PRN,
     "STD": STD,
+    "GRT": GRT,
+    "BAS": BAS,
 }
 
 

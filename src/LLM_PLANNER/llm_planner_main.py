@@ -100,7 +100,8 @@ Do not use the dictionary values as action names.
 
 If the user asks what the robot can do, set intent to "available_actions_question".
 If the user asks the robot to perform an action, set intent to "action_request".
-If the user only says hello or asks an unrelated question, set intent to "other".
+If the user says hello, set intent to "action_request" and use the greeting action.
+If the user asks an unrelated question, set intent to "other".
 
 For intent "available_actions_question", action_sequence must be empty.
 For intent "other", action_sequence must be empty.
@@ -118,12 +119,13 @@ If the user asks to lift an object, use GRB with that detected object.
 If the robot is already holding something and the user asks to lift it, use LFT.
 
 If the user asks to release, put down, or let go of an object, use REL.
-If the user asks to throw away, discard, or toss away an object, use TRW.
 If the user asks to throw an object, use THR.
 If the user asks to draw a heart, use HRT.
 If the user asks to hand an object to the camera/person, use HND.
 If the user asks the robot to lie down, crouch down, or 엎드리기/엎드려, use PRN.
 If the user asks the robot to stand up, straighten up, or 일어서기/일어서, use STD.
+If the user says hello or asks the robot to greet, wave hello, say hello, 인사하기/인사해/안녕 해줘, use GRT.
+If the user asks the robot to return to default pose, base pose, 기본 동작으로 돌아가기/기본 자세/기본 동작, use BAS.
 If the user asks to put object A in/on/onto object B, use:
 1. GRB with object A
 2. MVA with object B
@@ -200,7 +202,7 @@ These are physical actions the robot can perform.
 Answer using only available_action_descriptions.
 
 Do not mention internal action names.
-Do not mention codes such as DNC, MOV, MVA, GRB, REL, TRW, LFT, THR, HRT, HND, PRN, or STD.
+Do not mention codes such as DNC, MOV, MVA, GRB, REL, LFT, THR, HRT, HND, PRN, STD, GRT, or BAS.
 Do not say you cannot perform physical actions.
 Do not say you will perform an action now.
 
@@ -217,7 +219,7 @@ Return only JSON:
             data = self.llm.inference_json(
                 text=prompt,
                 default={
-                    "print_out": "I can dance, move to objects, move above objects, grab, release, lift, throw away, throw, draw a heart, hand objects over, lie down, and stand up."
+                    "print_out": "I can dance, move to objects, move above objects, grab, release, lift, throw, draw a heart, hand objects over, lie down, stand up, greet, and return to the default pose."
                 },
                 max_tokens=100,
             )
@@ -225,7 +227,7 @@ Return only JSON:
             print_out = self._str(data.get("print_out"))
 
             if print_out == "":
-                print_out = "I can dance, move to objects, move above objects, grab, release, lift, throw away, throw, draw a heart, hand objects over, lie down, and stand up."
+                print_out = "I can dance, move to objects, move above objects, grab, release, lift, throw, draw a heart, hand objects over, lie down, stand up, greet, and return to the default pose."
 
             return print_out
 
@@ -237,7 +239,7 @@ No executable robot action was selected.
 Make a short natural response to the user.
 
 Do not mention internal action names.
-Do not mention codes such as DNC, MOV, MVA, GRB, REL, TRW, LFT, THR, HRT, HND, PRN, or STD.
+Do not mention codes such as DNC, MOV, MVA, GRB, REL, LFT, THR, HRT, HND, PRN, STD, GRT, or BAS.
 
 user_command:
 {user_command}
@@ -280,7 +282,7 @@ Make a short natural response to the user.
 
 The robot will perform only selected_action_descriptions.
 Do not mention internal action names.
-Do not mention codes such as DNC, MOV, MVA, GRB, REL, TRW, LFT, THR, HRT, HND, PRN, or STD.
+Do not mention codes such as DNC, MOV, MVA, GRB, REL, LFT, THR, HRT, HND, PRN, STD, GRT, or BAS.
 Do not invent new actions.
 
 user_command:

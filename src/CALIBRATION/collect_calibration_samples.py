@@ -721,9 +721,11 @@ def draw_robot_detection(frame, yolo_robot):
     v = int(yolo_robot["v"])
     d = yolo_robot.get("d")
     conf = float(yolo_robot.get("conf", 0.0))
+    depth_radius = int(yolo_robot.get("depth_radius", 20))
 
     cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
     cv2.circle(vis, (u, v), 6, (0, 255, 0), -1)
+    cv2.circle(vis, (u, v), depth_radius, (255, 80, 80), 2, cv2.LINE_AA)
 
     if d is None:
         label = f"end_effector u={u} v={v} d=None conf={conf:.2f}"
